@@ -1,10 +1,10 @@
-import pandas as pd
+import pandas as pd # Datafram imports
+import ast  # For safely converting string tuples to actual tuples
 
 # Determine the range in which i and j are to each other 
 # (most likely symmetrical and known rangde)
 # Assume if i is origin also --> rij = (dx-0, dy-0, dz-0)
 # Determine possible K that are smaller than R^2
-
 
 # Determine Potential K's smaller than 5 in size
 def det_K_pot(min:int, max:int, R:int):
@@ -45,15 +45,23 @@ def det_K_suit(f_url:str, k_url: str, R: int):
     print("Done: The string url is: r'Data \ k_pot_coord.csv (Has been rewritten)")
     return r"Data\k_pot_coord.csv"
 
-   
-# Determine K's that match and hence neighbours with corresponding values
+# Determine K's that match and hence group subsequent J-coordinate with neighbouring
 def det_K_match(f_url, k_url):
-    i_df_j = pd.read_csv(f_url, sep=";", index_col=False)
-    i_df_k = pd.read_csv(k_url, sep=";", index_col=False)
-    j_list = list(zip(*[i_df_j[col] for col in i_df_j.columns[2:5]]))
-    k_list = list(zip(*[i_df_k[col] for col in i_df_k.columns]))
-    # k_list_j = i_df_k[i_df_k.columns[0]]
-    k_list_k = i_df_k[i_df_k.columns[1]]
-
-    temp =  []
-    print(j_list)
+    i_df_j = pd.read_csv(f_url, sep=";", index_col=False)  # File with dx, dy, dz
+    i_df_k = pd.read_csv(k_url, sep=";", index_col=False)  # File with j and k coordinates
+    j_set = set(list(zip(*[i_df_j[col] for col in i_df_j.columns[2:5]])))
+    
+    # Convert k-coordinate strings to tuples (e.g., "(-5, 0, 0)" → (-5.0, 0.0, 0.0))
+    k_list_k = i_df_k['k-coordinate'].apply(lambda x: tuple(map(float, ast.literal_eval(x))))
+    i_df_k['k-tuple'] = k_list_k  # Store as a new column
+    
+    df_k_filtered = i_df_k[i_df_k['k-tuple'].isin(j_set)]
+    
+    # Group matching k-coordinates by j-coordinate
+    # Convert j-coordinate strings to tuples (same as k-coordinate)
+    j_tuples = i_df_k['j-coordinate'].apply(lambda x: tuple(map(float, ast.literal_eval(x))))
+    df_k_filtered['j-tuple'] = j_tuples
+    
+    grouped = df_k_filtered.groupby('j-tuple')['k-tuple'].apply(list).reset_index()
+    grouped.to_csv(r"Data\neighbouring-k-to-j.csv", sep=";", index=False, header=["j-coordinate", "k-coordinates"])
+    return grouped
