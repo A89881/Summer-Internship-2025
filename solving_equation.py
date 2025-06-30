@@ -1,91 +1,84 @@
 import numpy as np
+import pandas as pd
+import ast
+from typing import Tuple, List, Dict
 
-def solve_dyson_equation(X_up, X_down, U):
-    """
-    Solves the Dyson-like matrix equations for the longitudinal K-functions:
-    K↑↑ = X↑ + X↑U↑↑K↑↑ + X↑U↑↓K↓↑
-    K↓↓ = X↓ + X↓U↓↓K↓↓ + X↓U↓↑K↑↓
-    K↑↓ = X↑U↑↓K↓↓ + X↑U↑↑K↑↓
-    K↓↑ = X↓U↓↑K↑↑ + X↓U↓↓K↓↑
+def parse_j_k_mapping(file_path: str) -> Dict[Tuple[float, float, float], List[Tuple[float, float, float]]]:
+    mapping = {}
+    with open(file_path, 'r') as f:
+        for line in f:
+            if not line.strip():  # Skip empty lines
+                continue
+            try:
+                j_str, k_str = line.strip().split(';')
+                j_site = ast.literal_eval(j_str.strip())
+                k_sites = ast.literal_eval(k_str.strip())
+                if isinstance(j_site, tuple) and isinstance(k_sites, list):
+                    mapping[j_site] = k_sites
+            except Exception as e:
+                print(f"Error parsing line: {line.strip()}\n{e}")
+    return mapping
 
-    Parameters:
-    - X_up, X_down: susceptibility-like matrices (numpy.ndarray)
-    - U: interaction kernel, a 2x2 block of 2D numpy arrays:
+def load_bare_response(file_path: str) -> pd.DataFrame:
+    return pd.read_csv(file_path)
 
-    Returns:
-    - K: dictionary with keys 'uu', 'dd', 'ud', 'du' representing the 4 components
-    """
-    # Shorten names
-    Xu, Xd = X_up, X_down
-    Uuu, Uud = U[0][0], U[0][1]
-    Udu, Udd = U[1][0], U[1][1]
+def collect_bare_responses(k_sites: List[Tuple[float, float, float]], bare_df: pd.DataFrame) -> Dict[Tuple, Tuple[float, float]]:
+    response_map = {}
+    for k in k_sites:
+        match = bare_df[(bare_df['dx'] == k[0]) & (bare_df['dy'] == k[1]) & (bare_df['dz'] == k[2])]
+        if not match.empty:
+            row = match.iloc[0]
+            response_map[k] = (row['X_up'], row['X_down'])
+    return response_map
 
-    # Size check
-    assert Xu.shape == Xd.shape, "X_up and X_down must have same shape"
-    n = Xu.shape[0]
+def solve_dyson_recursive(X_up_map: Dict[Tuple, float], X_dn_map: Dict[Tuple, float], 
+                          U: np.ndarray, tol=1e-8, max_iter=1000) -> Tuple[float, float, float, float]:
+    K_upup = K_dndn = K_updn = K_dnup = 0.0
 
-    # Initialize all K matrices
-    Kuu = np.zeros((n, n))
-    Kdd = np.zeros((n, n))
-    Kud = np.zeros((n, n))
-    Kdu = np.zeros((n, n))
+    for _ in range(max_iter):
+        K_upup_new = sum(X_up_map[k] + X_up_map[k] * (U[0, 0] * K_upup + U[0, 1] * K_dnup) for k in X_up_map)
+        K_dndn_new = sum(X_dn_map[k] + X_dn_map[k] * (U[1, 1] * K_dndn + U[1, 0] * K_updn) for k in X_dn_map)
+        K_updn_new = sum(X_up_map[k] * (U[0, 1] * K_dndn + U[0, 0] * K_updn) for k in X_up_map)
+        K_dnup_new = sum(X_dn_map[k] * (U[1, 0] * K_upup + U[1, 1] * K_dnup) for k in X_dn_map)
 
-    # Flatten everything for solving a big linear system
-    I = np.eye(n * n)
+        if (abs(K_upup - K_upup_new) < tol and abs(K_dndn - K_dndn_new) < tol and
+            abs(K_updn - K_updn_new) < tol and abs(K_dnup - K_dnup_new) < tol):
+            break
 
-    def kron_diag(A, B):
-        # Kronecker product but suitable for AXB in vectorized form
-        return np.kron(A, B)
+        K_upup, K_dndn, K_updn, K_dnup = K_upup_new, K_dndn_new, K_updn_new, K_dnup_new
 
-    # Dyson system (linearized): AX = B
-    # Vectorize all matrices with .reshape(-1, 1)
-    A11 = I - kron_diag(Xu, Uuu)
-    A12 = -kron_diag(Xu, Uud)
-    A21 = -kron_diag(Xd, Udu)
-    A22 = I - kron_diag(Xd, Udd)
+    return K_upup, K_dndn, K_updn, K_dnup
 
-    # Solve for Kuu and Kdu first
-    A_top = np.hstack((A11, A12))
-    A_bot = np.hstack((A21, A22))
-    A_full = np.vstack((A_top, A_bot))
+def compute_chi_zz(K_upup: float, K_dndn: float, K_updn: float, K_dnup: float) -> float:
+    return 0.25 * (K_upup + K_dndn - K_updn - K_dnup)
 
-    B1 = Xu.reshape(-1, 1)
-    B2 = Xd.reshape(-1, 1)
-    B_full = np.vstack((B1, B2))
+def compute_all_chi_zz(j_k_file: str, bare_response_file: str, U_list: List[float], output_csv: str = "chi_zz_results.csv") -> pd.DataFrame:
+    j_k_map = parse_j_k_mapping(j_k_file)
+    bare_df = load_bare_response(bare_response_file)
+    U = np.array([[U_list[0], U_list[1]], [U_list[2], U_list[3]]])
 
-    Kvec = np.linalg.solve(A_full, B_full)
-    Kuu = Kvec[:n*n].reshape(n, n)
-    Kdu = Kvec[n*n:].reshape(n, n)
+    results = []
 
-    # Then solve for Kud and Kdd
-    A11_ = I - kron_diag(Xu, Uuu)
-    A12_ = -kron_diag(Xu, Uud)
-    A21_ = -kron_diag(Xd, Udu)
-    A22_ = I - kron_diag(Xd, Udd)
+    for j_site, k_sites in j_k_map.items():
+        responses = collect_bare_responses(k_sites, bare_df)
+        X_up_map = {k: val[0] for k, val in responses.items()}
+        X_dn_map = {k: val[1] for k, val in responses.items()}
 
-    A_top2 = np.hstack((A12_, A11_))  # reorder to Kud, Kdd
-    A_bot2 = np.hstack((A22_, A21_))
-    A_full2 = np.vstack((A_top2, A_bot2))
+        if not X_up_map or not X_dn_map:
+            print(f"Warning: No valid k-sites found for j-site {j_site}")
+            continue
 
-    # Right-hand side for second system
-    B1_ = np.zeros((n*n, 1))  # K↑↓ has no inhomogeneous term
-    B2_ = np.zeros((n*n, 1))  # K↓↓ has no inhomogeneous term
+        K_upup, K_dndn, K_updn, K_dnup = solve_dyson_recursive(X_up_map, X_dn_map, U)
+        chi_zz = compute_chi_zz(K_upup, K_dndn, K_updn, K_dnup)
 
-    Kvec2 = np.linalg.solve(A_full2, np.vstack((B1_, B2_)))
-    Kud = Kvec2[:n*n].reshape(n, n)
-    Kdd = Kvec2[n*n:].reshape(n, n)
+        results.append({
+            "j_dx": j_site[0],
+            "j_dy": j_site[1],
+            "j_dz": j_site[2],
+            "chi_zz": chi_zz
+        })
 
-    return {
-        'uu': Kuu,
-        'dd': Kdd,
-        'ud': Kud,
-        'du': Kdu
-    }
-
-
-def compute_chi_zz(K):
-    """
-    Computes longitudinal spin susceptibility from K matrices:
-    χ^zz = 1/4 (K↑↑ + K↓↓ - K↑↓ - K↓↑)
-    """
-    return 0.25 * (K['uu'] + K['dd'] - K['ud'] - K['du'])
+    df_out = pd.DataFrame(results)
+    df_out.to_csv(output_csv, index=False)
+    print(f"Saved χ^zz results to '{output_csv}'")
+    return df_out
