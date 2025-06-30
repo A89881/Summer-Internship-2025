@@ -4,7 +4,7 @@ import numpy as np
 from format import *
 from determine_k_site import *
 
-url = r"Data\raw-data-set.csv"
+url = r"Data\chfile-1.csv"
 radius = 5
 min = -10
 max = 10

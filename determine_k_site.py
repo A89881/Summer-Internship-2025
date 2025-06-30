@@ -21,7 +21,7 @@ def det_K_pot(min:int, max:int, R:int):
     df = pd.DataFrame(list(zip(k_x_vals, k_y_vals, k_z_vals)))
     df.columns = ["k_dx", "k_dy", "k_dz"]
     df.to_csv(r"Data\k_pot_coord.csv", sep=";", index=False)
-    print("Done: The string url is: r'Data \ k_pot_coord.csv ")
+    print("Done: The string url is: r'Data \ k_pot_coord.csv ") # type: ignore
     return r"Data\k_pot_coord.csv"
 
 # Determine K's in the proximity of R to j-coordinates
@@ -42,7 +42,7 @@ def det_K_suit(f_url:str, k_url: str, R: int):
     df = pd.DataFrame(list(zip(suit_j,suit_k)))
     df.columns = ["j-coordinate", "k-coordinate"]
     df.to_csv(r"Data\k_pot_coord.csv", sep=";", index=False)
-    print("Done: The string url is: r'Data \ k_pot_coord.csv (Has been rewritten)")
+    print("Done: The string url is: r'Data \ k_pot_coord.csv (Has been rewritten)") # type: ignore
     return r"Data\k_pot_coord.csv"
 
 # Determine K's that match and hence group subsequent J-coordinate with neighbouring
@@ -54,7 +54,6 @@ def det_K_match(f_url, k_url):
     # Convert k-coordinate strings to tuples (e.g., "(-5, 0, 0)" → (-5.0, 0.0, 0.0))
     k_list_k = i_df_k['k-coordinate'].apply(lambda x: tuple(map(float, ast.literal_eval(x))))
     i_df_k['k-tuple'] = k_list_k  # Store as a new column
-    
     df_k_filtered = i_df_k[i_df_k['k-tuple'].isin(j_set)]
     
     # Group matching k-coordinates by j-coordinate
