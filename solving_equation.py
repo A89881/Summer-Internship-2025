@@ -45,21 +45,21 @@ def construct_A_int(x_map_up: Dict,
                    x_map_down: Dict, 
                    k_coords: List[Tuple[float, float, float]], 
                    U: np.ndarray) -> np.ndarray:
-    """Build coupling matrix A_int (2N×2N) from X_kqkq' blocks."""
+    """Build coupling matrix A_int (2Nx2N) from X_kqkq' blocks."""
     N = len(k_coords)
     A = np.zeros((2*N, 2*N))
     for q, kq in enumerate(k_coords):
         for qp, kqp in enumerate(k_coords):
             rel = tuple(np.subtract(kq, kqp))  # Vector kq - kqp
             x_up, x_down = get_x_block(rel, x_map_up, x_map_down)
-            # Fill 2×2 block: X_kqkqp * U
+            # Fill 2x2 block: X_kqkqp * U
             A[2*q:2*q+2, 2*qp:2*qp+2] = np.diag([x_up, x_down]) @ U
     return A
 
 def construct_X_int(x_map_up: Dict, 
                    x_map_down: Dict, 
                    k_coords: List[Tuple[float, float, float]]) -> np.ndarray:
-    """Build X_int vector (2N×2) from X_kqj blocks."""
+    """Build X_int vector (2Nx2) from X_kqj blocks."""
     X = np.zeros((2*len(k_coords), 2))
     origin = (0.0, 0.0, 0.0)
     for q, kq in enumerate(k_coords):
@@ -75,7 +75,7 @@ def compute_chi_zz(x_map_up: Dict,
                   K_int: np.ndarray, 
                   U: np.ndarray) -> float:
     """Compute χᶻᶻ = ¼(K↑↑ + K↓↓ - K↑↓ - K↓↑)."""
-    # Get Xij (2×2 diagonal)
+    # Get Xij (2x2 diagonal)
     xij_up, xij_down = get_x_block(j_coord, x_map_up, x_map_down)
     
     # Sum over intermediates: Σ Xik_q * U * Kk_qj
@@ -84,7 +84,7 @@ def compute_chi_zz(x_map_up: Dict,
     for q, kq in enumerate(k_coords):
         rel = tuple(np.subtract(kq, origin))  # Vector kq - i
         xik_up, xik_down = get_x_block(rel, x_map_up, x_map_down)
-        K_block = K_int[2*q:2*q+2, :]  # 2×2 block of Kk_qj
+        K_block = K_int[2*q:2*q+2, :]  # 2x2 block of Kk_qj
         K_sum += np.diag([xik_up, xik_down]) @ U @ K_block
     
     # Full Kij = Xij + Σ terms
@@ -93,13 +93,13 @@ def compute_chi_zz(x_map_up: Dict,
     # χᶻᶻ = ¼(K↑↑ + K↓↓ - K↑↓ - K↓↑)
     return (Kij[0,0] + Kij[1,1] - Kij[0,1] - Kij[1,0]) / 4.0
 
-def compute_Kzz_all(xij_file: str, 
+def compute_Xzz_all(xij_file: str, 
                    kfile: str, 
                    U_params: Tuple[float, float, float, float], 
                    output_file: str = r'Data\Xzz_output.csv', 
-                   temp_txt: str = r'Data\temp_intermediates.txt'):
+                   temp_txt: str = r'Data\debugg.txt'):
     """Main computation workflow."""
-    # Initialize interaction matrix (2×2)
+    # Initialize interaction matrix (2x2)
     U = np.array([
         [U_params[0], U_params[2]],  # U↑↑, U↑↓
         [U_params[3], U_params[1]]   # U↓↑, U↓↓
@@ -126,14 +126,14 @@ def compute_Kzz_all(xij_file: str,
                 chi_zz = compute_chi_zz(x_map_up, x_map_down, j_coord, k_coords, K_int, U)
                 results.append({'j-coordinate': str(j_coord), 'Xzz': chi_zz})
                 
-                # Save first 10 intermediates for debugging
-                if j_idx < 10:
+                # Save first 3 intermediates for debugging
+                if j_idx < 3:
                     debug_out.write(f"===== J-site #{j_idx + 1}: j = {j_coord} =====\n\n")
-                    debug_out.write("A_int Matrix (2N×2N):\n")
+                    debug_out.write("A_int Matrix (2Nx2N):\n")
                     np.savetxt(debug_out, A_int, fmt="%.6e", delimiter='\t')
-                    debug_out.write("\n\nX_int Matrix (2N×2):\n")
+                    debug_out.write("\n\nX_int Matrix (2Nx2):\n")
                     np.savetxt(debug_out, X_int, fmt="%.6e", delimiter='\t')
-                    debug_out.write("\n\nK_int Solution (2N×2):\n")
+                    debug_out.write("\n\nK_int Solution (2Nx2):\n")
                     np.savetxt(debug_out, K_int, fmt="%.6e", delimiter='\t')
                     debug_out.write("\n\n")
                     
@@ -144,4 +144,4 @@ def compute_Kzz_all(xij_file: str,
     # Save final results
     pd.DataFrame(results).to_csv(output_file, index=False)
     print(f"[SUCCESS] Results saved to {output_file}")
-    print(f"[DEBUG] First 10 intermediates saved to {temp_txt}")
+    print(f"[DEBUG] First 3 intermediates saved to {temp_txt}")

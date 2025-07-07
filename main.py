@@ -13,6 +13,6 @@ k_pot_url = det_K_pot(min, max, radius)
 k_suit_url = det_K_suit(f_url, k_pot_url, radius)
 k_match_url = det_K_match(f_url, k_suit_url)
 U_kernel = (2.0, 2.0, 0.0, 0.0)  # U↑↑, U↓↓, U↑↓, U↓↑
-compute_Kzz_all(f_url, k_match_url, U_kernel)
+compute_Xzz_all(f_url, k_match_url, U_kernel)
 time_end = t.time()
 print(f"run time {time_end-time_start}")
