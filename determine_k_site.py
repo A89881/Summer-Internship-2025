@@ -20,9 +20,11 @@ def det_K_pot(min:int, max:int, R:int):
                     k_z_vals.append(k)
     df = pd.DataFrame(list(zip(k_x_vals, k_y_vals, k_z_vals)))
     df.columns = ["k_dx", "k_dy", "k_dz"]
-    df.to_csv(r"Data\k_pot_coord.csv", sep=";", index=False)
-    print("Done: The string url is: r'Data \ k_pot_coord.csv' ") # type: ignore
-    return r"Data\k_pot_coord.csv"
+    output_path = r"Data\k_pot_coord.csv" # type: ignore
+    df.to_csv(output_path, sep=";", index=False)
+    print(f"Done: The string url is: {output_path}") # type: ignore
+    return output_path
+
 
 # Determine K's in the proximity of R to j-coordinates
 def det_K_suit(f_url:str, k_url: str, R: int):
@@ -41,9 +43,10 @@ def det_K_suit(f_url:str, k_url: str, R: int):
                 suit_j.append((j_dx,j_dy,j_dz))
     df = pd.DataFrame(list(zip(suit_j,suit_k)))
     df.columns = ["j-coordinate", "k-coordinate"]
-    df.to_csv(r"Data\k_pot_coord.csv", sep=";", index=False)
-    print("Done: The string url is: r'Data \ k_pot_coord.csv' (Has been rewritten)") # type: ignore
-    return r"Data\k_pot_coord.csv"
+    output_path = r"Data\k_pot_coord.csv" # type: ignore
+    df.to_csv(output_path, sep=";", index=False)
+    print(f"Done: The string url is: {output_path} (Has been rewritten)") # type: ignore
+    return output_path
 
 # Determine K's that match and hence group subsequent J-coordinate with neighbouring
 def det_K_match(f_url, k_url):
@@ -62,7 +65,8 @@ def det_K_match(f_url, k_url):
     df_k_filtered['j-tuple'] = j_tuples
     
     grouped = df_k_filtered.groupby('j-tuple')['k-tuple'].apply(list).reset_index()
-    grouped.to_csv(r"Data\neighbouring-k-to-j.csv", sep=";", index=False, header=["j-coordinate", "k-coordinates"])
-    print("Done: The string url is: r'Data \ neighbouring-k-to-j.csv' ") # type: ignore
+    output_path = r"Data\neighbouring-k-to-j.csv"
+    grouped.to_csv(output_path, sep=";", index=False, header=["j-coordinate", "k-coordinates"])
+    print(f"Done: The string url is: {output_path} ") # type: ignore
     # return grouped
-    return r"Data\neighbouring-k-to-j.csv"
+    return output_path

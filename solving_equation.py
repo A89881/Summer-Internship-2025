@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 
 def parse_xij_file(xij_path: str) -> Tuple[Dict[Tuple[float, float, float], float], 
                                          Dict[Tuple[float, float, float], float]]:
-    """Parse Xij file with χ⁰↑ and χ⁰↓ values for relative coordinates."""
+    """Parse Xij file with X↑ and X↓ values for relative coordinates."""
     df = pd.read_csv(xij_path, sep=';')
     x_map_up = {}
     x_map_down = {}
@@ -28,17 +28,28 @@ def parse_k_contrib_file(kfile_path: str) -> Dict[Tuple[float, float, float],
             contrib_map[j_coord] = k_coords
     return contrib_map
 
+# def get_x_block(rel: Tuple[float, float, float], 
+#                x_map_up: Dict, 
+#                x_map_down: Dict) -> Tuple[float, float]:
+#     """Get X matrix block for relative coordinate with dipole fallback."""
+#     x_up = x_map_up.get(rel, 0.0)
+#     x_down = x_map_down.get(rel, 0.0)
+#     if x_up == 0.0 or x_down == 0.0:  # Only apply dipole if exactly zero
+#         r = max(np.linalg.norm(rel), 1e-6)  # type: ignore # Avoid division by zero
+#         dipole = 0
+#         x_up = x_up if x_up != 0.0 else dipole
+#         x_down = x_down if x_down != 0.0 else dipole
+#     return x_up, x_down
+
 def get_x_block(rel: Tuple[float, float, float], 
-               x_map_up: Dict, 
-               x_map_down: Dict) -> Tuple[float, float]:
-    """Get X matrix block for relative coordinate with dipole fallback."""
+                x_map_up: Dict, 
+                x_map_down: Dict) -> Tuple[float, float]:
+    """Get X matrix block for relative coordinate. Self-interactions are zero."""
+    if rel == (0.0, 0.0, 0.0):
+        return 0.0, 0.0  # No self-interaction
+
     x_up = x_map_up.get(rel, 0.0)
     x_down = x_map_down.get(rel, 0.0)
-    if x_up == 0.0 or x_down == 0.0:  # Only apply dipole if exactly zero
-        r = max(np.linalg.norm(rel), 1e-6)  # type: ignore # Avoid division by zero
-        dipole = 1.0 / (r**3)
-        x_up = x_up if x_up != 0.0 else dipole
-        x_down = x_down if x_down != 0.0 else dipole
     return x_up, x_down
 
 def construct_A_int(x_map_up: Dict, 
@@ -143,5 +154,6 @@ def compute_Xzz_all(xij_file: str,
     
     # Save final results
     pd.DataFrame(results).to_csv(output_file, index=False)
-    print(f"[SUCCESS] Results saved to {output_file}")
-    print(f"[DEBUG] First 3 intermediates saved to {temp_txt}")
+    print(f"Done: The string url is: {output_file}")
+    print(f"Done: The First 3 intermediates saved to {temp_txt}")
+    return output_file
