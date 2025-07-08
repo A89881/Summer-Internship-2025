@@ -74,7 +74,7 @@ def compute_chi_zz(x_map_up: Dict,
                   k_coords: List[Tuple[float, float, float]], 
                   K_int: np.ndarray, 
                   U: np.ndarray) -> float:
-    """Compute χᶻᶻ = ¼(K↑↑ + K↓↓ - K↑↓ - K↓↑)."""
+    """Compute Xzz = 1/4(K↑↑ + K↓↓ - K↑↓ - K↓↑)."""
     # Get Xij (2x2 diagonal)
     xij_up, xij_down = get_x_block(j_coord, x_map_up, x_map_down)
     
