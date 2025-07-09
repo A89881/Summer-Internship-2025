@@ -1,4 +1,4 @@
-from main.format import *
+from format import *
 from determine_k_site import *
 from solving_equation import *
 import time as t

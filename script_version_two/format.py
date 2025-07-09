@@ -8,7 +8,7 @@ def format_data(url: str):
     i_df = pd.read_csv(url, sep=r"\s+", index_col=False)
     output_path = r"data\formatted-data.csv"
     i_df.to_csv(output_path, sep=";", index=False)
-    print(f"Done: The string url is: {output_path}")
+    print(f"Done: The string url is: {output_path} (Result)")
     return output_path
 
 import csv
@@ -55,4 +55,4 @@ def merge_format_and_xzz(
                 f"{int(i):<4}{int(j):<4}{dx_i:5}{dy_i:5}{dz_i:5}"
                 f"{float(Jij):11.6f}{float(chi_up):18.6E}{float(chi_down):18.6E}{xzz_val:15.6E}\n"
             )
-    print(f"Done: The string url is: {output_file}")
+    print(f"Done: The string url is: {output_file} (Result)")

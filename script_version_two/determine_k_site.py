@@ -22,7 +22,7 @@ def det_K_pot(min:int, max:int, R:int):
     df.columns = ["k_dx", "k_dy", "k_dz"]
     output_path = r"data\k_pot_coord.csv" # type: ignore
     df.to_csv(output_path, sep=";", index=False)
-    print(f"Done: The string url is: {output_path}") # type: ignore
+    print(f"Done: The string url is: {output_path} (Result)") # type: ignore
     return output_path
 
 
@@ -67,6 +67,6 @@ def det_K_match(f_url, k_url):
     grouped = df_k_filtered.groupby('j-tuple')['k-tuple'].apply(list).reset_index()
     output_path = r"data\neighbouring-k-to-j.csv"
     grouped.to_csv(output_path, sep=";", index=False, header=["j-coordinate", "k-coordinates"])
-    print(f"Done: The string url is: {output_path} ") # type: ignore
+    print(f"Done: The string url is: {output_path} (Result)") # type: ignore
     # return grouped
     return output_path
