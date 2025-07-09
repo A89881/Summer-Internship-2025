@@ -7,7 +7,7 @@ import numpy as np
 import os
 
 # === Load CSV data ===
-file_path = r'data\xzz_output.csv'
+file_path = r'data\xzz_output_iter.csv'
 df = pd.read_csv(file_path)
 
 # === Parse j-coordinate strings to (x, y, z)
@@ -24,47 +24,52 @@ print("Max diff under inversion symmetry:", diff.max())
 output_dir = 'z_layer_plots'
 os.makedirs(output_dir, exist_ok=True)
 
-# === Discrete color setup
-N_BINS = 9  # Number of discrete color steps
-vmin = df['Xzz'].min()
-vmax = df['Xzz'].max()
+# === Color normalization and mapping ===
+N_BINS = 11
+vmax = df['Xzz'].abs().max()
+vmin = -vmax  # Center colormap on 0
 bounds = np.linspace(vmin, vmax, N_BINS + 1)
 norm = BoundaryNorm(boundaries=bounds, ncolors=N_BINS)
-cmap = plt.get_cmap('seismic', N_BINS)  # discrete seismic map
+cmap = plt.get_cmap('coolwarm', N_BINS)  # perceptual clarity around 0
 
-# === Plot 2D scatter plots layer by layer ===
+# === Plot 2D "pixel" maps per z-layer ===
 z_layers = sorted(df['z'].unique())
 
 for z_val in z_layers:
     layer_df = df[df['z'] == z_val]
+    x_vals = sorted(layer_df['x'].unique())
+    y_vals = sorted(layer_df['y'].unique())
+
+    x_index = {v: i for i, v in enumerate(x_vals)}
+    y_index = {v: i for i, v in enumerate(y_vals)}
+    grid = np.full((len(y_vals), len(x_vals)), np.nan)
+
+    for _, row in layer_df.iterrows():
+        i = y_index[row['y']]
+        j = x_index[row['x']]
+        grid[i, j] = row['Xzz']
 
     fig, ax = plt.subplots(figsize=(6, 5))
-    sc = ax.scatter(
-        layer_df['x'], layer_df['y'],
-        c=layer_df['Xzz'],
-        cmap=cmap,
-        norm=norm,
-        s=120, edgecolor='black', linewidth=0.5
-    )
+    im = ax.imshow(grid, origin='lower', cmap=cmap, norm=norm,
+                   extent=[min(x_vals)-0.5, max(x_vals)+0.5, min(y_vals)-0.5, max(y_vals)+0.5], # type: ignore
+                   interpolation='none', aspect='equal')
 
-    ax.set_title(f'Xzz Scatter at z = {z_val}')
+    ax.set_title(f'Xzz Heatmap at z = {z_val}')
     ax.set_xlabel('x')
     ax.set_ylabel('y')
-    ax.set_aspect('equal', adjustable='box')
     ax.grid(True, linestyle='--', linewidth=0.5, alpha=0.6)
 
-    cbar = plt.colorbar(sc, ax=ax, pad=0.01, ticks=bounds)
+    cbar = plt.colorbar(im, ax=ax, pad=0.01, ticks=bounds)
     cbar.set_label('Xzz (discretized)')
-    cbar.ax.set_yticklabels([f"{b:.1e}" for b in bounds])  # scientific notation
+    cbar.ax.set_yticklabels([f"{b:.1e}" for b in bounds])
 
     plt.tight_layout()
     output_path = os.path.join(output_dir, f'Xzz_z{z_val:.1f}.png')
     plt.savefig(output_path, dpi=300)
     plt.close()
-
     print(f"Saved: {output_path}")
 
-# === 3D scatter with discrete colormap ===
+# === 3D scatter plot ===
 fig = plt.figure(figsize=(10, 8))
 ax = fig.add_subplot(111, projection='3d')
 
