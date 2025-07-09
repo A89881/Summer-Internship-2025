@@ -7,7 +7,7 @@ import numpy as np
 import os
 
 # === Load CSV data ===
-file_path = r'Data\Xzz_output.csv'
+file_path = r'data\xzz_output.csv'
 df = pd.read_csv(file_path)
 
 # === Parse j-coordinate strings to (x, y, z)
@@ -73,7 +73,7 @@ sc = ax.scatter(
     c=df['Xzz'],
     cmap=cmap,
     norm=norm,
-    s=30,
+    s=30, # type: ignore
     edgecolor='black', linewidth=0.3
 )
 
@@ -83,7 +83,7 @@ cbar.ax.set_yticklabels([f"{b:.1e}" for b in bounds])
 
 ax.set_xlabel('x')
 ax.set_ylabel('y')
-ax.set_zlabel('z')
+ax.set_zlabel('z') # type: ignore
 ax.set_title('3D Scatter Plot of Xzz (Discrete Colors)')
 plt.tight_layout()
 plt.show()

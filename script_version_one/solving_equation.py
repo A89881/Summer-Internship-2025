@@ -28,18 +28,6 @@ def parse_k_contrib_file(kfile_path: str) -> Dict[Tuple[float, float, float],
             contrib_map[j_coord] = k_coords
     return contrib_map
 
-# def get_x_block(rel: Tuple[float, float, float], 
-#                x_map_up: Dict, 
-#                x_map_down: Dict) -> Tuple[float, float]:
-#     """Get X matrix block for relative coordinate with dipole fallback."""
-#     x_up = x_map_up.get(rel, 0.0)
-#     x_down = x_map_down.get(rel, 0.0)
-#     if x_up == 0.0 or x_down == 0.0:  # Only apply dipole if exactly zero
-#         r = max(np.linalg.norm(rel), 1e-6)  # type: ignore # Avoid division by zero
-#         dipole = 0
-#         x_up = x_up if x_up != 0.0 else dipole
-#         x_down = x_down if x_down != 0.0 else dipole
-#     return x_up, x_down
 
 def get_x_block(rel: Tuple[float, float, float], 
                 x_map_up: Dict, 
@@ -107,8 +95,8 @@ def compute_chi_zz(x_map_up: Dict,
 def compute_Xzz_all(xij_file: str, 
                    kfile: str, 
                    U_params: Tuple[float, float, float, float], 
-                   output_file: str = r'Data\Xzz_output.csv', 
-                   temp_txt: str = r'Data\debugg.txt'):
+                   output_file: str = r'data\xzz_output.csv', 
+                   temp_txt: str = r'data\debugg.txt'):
     """Main computation workflow."""
     # Initialize interaction matrix (2x2)
     U = np.array([

@@ -1,9 +1,9 @@
-from format import *
+from main.format import *
 from determine_k_site import *
 from solving_equation import *
 import time as t
 
-url = r"Data\chfile-1.csv"
+url = r"data\chfile-1.csv"
 radius = 5
 min = -10
 max = 10

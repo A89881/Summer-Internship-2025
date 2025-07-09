@@ -6,10 +6,7 @@ from typing import Union, Tuple
 
 def format_data(url: str):
     i_df = pd.read_csv(url, sep=r"\s+", index_col=False)
-    # for col in i_df.columns[2:5]:
-    #     i_df[col] = round(i_df[col] / 2.71)
-    # i_df = i_df.drop(["Jij"], axis=1)
-    output_path = r"Data\formatted-data.csv"
+    output_path = r"data\formatted-data.csv"
     i_df.to_csv(output_path, sep=";", index=False)
     print(f"Done: The string url is: {output_path}")
     return output_path
@@ -20,7 +17,7 @@ from typing import Tuple
 def merge_format_and_xzz(
     format_file: str,
     xzz_file: str,
-    output_file=r"Data\formatted_output.dat") -> None:
+    output_file=r"data\formatted_output.dat") -> None:
     """
     Merge Xzz values into the format file and output a .dat file.
     
