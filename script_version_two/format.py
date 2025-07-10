@@ -6,7 +6,7 @@ from typing import Union, Tuple
 
 def format_data(url: str):
     i_df = pd.read_csv(url, sep=r"\s+", index_col=False)
-    output_path = r"data\formatted-data.csv"
+    output_path = r"data\formatted_data.csv"
     i_df.to_csv(output_path, sep=";", index=False)
     print(f"Done: The string url is: {output_path} (Result)")
     return output_path

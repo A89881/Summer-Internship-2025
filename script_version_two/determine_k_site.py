@@ -65,7 +65,7 @@ def det_K_match(f_url, k_url):
     df_k_filtered['j-tuple'] = j_tuples
     
     grouped = df_k_filtered.groupby('j-tuple')['k-tuple'].apply(list).reset_index()
-    output_path = r"data\neighbouring-k-to-j.csv"
+    output_path = r"data\neighbouring_k_to_j.csv"
     grouped.to_csv(output_path, sep=";", index=False, header=["j-coordinate", "k-coordinates"])
     print(f"Done: The string url is: {output_path} (Result)") # type: ignore
     # return grouped
