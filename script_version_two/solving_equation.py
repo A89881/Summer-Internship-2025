@@ -52,8 +52,8 @@ def compute_Kij_iterative(Xij: np.ndarray,
 def compute_Xzz_all(xij_file: str,
                               kfile: str,
                               U_params: Tuple[float, float, float, float],
-                              output_file: str = r'data\xzz_output_iter.csv',
-                              temp_txt: str = r'data\debug_iter.txt'):
+                              output_file: str,
+                              temp_txt: str):
     U = np.array([
         [U_params[0], U_params[2]],
         [U_params[3], U_params[1]]

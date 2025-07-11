@@ -9,9 +9,9 @@ def plot_static_and_spin_decay(
     spin_file: str,
     transform_matrix: List[List[float]],
     scale_diagonal: List[float],
-    output_static: str = r"data\static_decay_plot.png",
-    output_xzz: str = r"data\xzz_decay_plot.png",
-    output_comparison: str = r"data\comparison_decay_plot.png"
+    output_static: str,
+    output_xzz: str,
+    output_comparison: str
 ):
     """
     Generates two plots:
@@ -100,13 +100,4 @@ def plot_static_and_spin_decay(
     print(f"Comparison decay plot saved to: {output_comparison}")
 
 
-plot_static_and_spin_decay(
-    static_file="data/formatted_data.csv",
-    spin_file="data/xzz_output_iter.csv",
-    transform_matrix=[
-        [-0.5, 0.5, 0.5],  # x-axis
-        [0.5, -0.5, 0.5],  # y-axis
-        [0.5, 0.5, -0.5]   # z-axis
-    ],
-    scale_diagonal=[5.42, 5.42, 5.42],  # Example lattice scaling in a₀
-)
+

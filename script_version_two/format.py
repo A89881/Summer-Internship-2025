@@ -4,9 +4,9 @@ import pandas as pd
 import csv
 from typing import Union, Tuple
 
-def format_data(url: str):
+def format_data(url: str, output_file: str):
     i_df = pd.read_csv(url, sep=r"\s+", index_col=False)
-    output_path = r"data\formatted_data.csv"
+    output_path = output_file
     i_df.to_csv(output_path, sep=";", index=False)
     print(f"Done: The string url is: {output_path} (Result)")
     return output_path
@@ -17,7 +17,7 @@ from typing import Tuple
 def merge_format_and_xzz(
     format_file: str,
     xzz_file: str,
-    output_file=r"data\formatted_output.dat") -> None:
+    output_file) -> None:
     """
     Merge Xzz values into the format file and output a .dat file.
     

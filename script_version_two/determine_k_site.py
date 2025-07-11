@@ -7,7 +7,7 @@ import ast  # For safely converting string tuples to actual tuples
 # Determine possible K that are smaller than R^2
 
 # Determine Potential K's smaller than 5 in size
-def det_K_pot(min:int, max:int, R:int):
+def det_K_pot(min:int, max:int, R:int, output_file):
     k_x_vals = []
     k_y_vals = []
     k_z_vals = []
@@ -20,14 +20,14 @@ def det_K_pot(min:int, max:int, R:int):
                     k_z_vals.append(k)
     df = pd.DataFrame(list(zip(k_x_vals, k_y_vals, k_z_vals)))
     df.columns = ["k_dx", "k_dy", "k_dz"]
-    output_path = r"data\k_pot_coord.csv" # type: ignore
+    output_path = output_file
     df.to_csv(output_path, sep=";", index=False)
     print(f"Done: The string url is: {output_path} (Result)") # type: ignore
     return output_path
 
 
 # Determine K's in the proximity of R to j-coordinates
-def det_K_suit(f_url:str, k_url: str, R: int):
+def det_K_suit(f_url:str, k_url: str, R: int, output_file):
     i_df_j = pd.read_csv(f_url, sep=";", index_col=False)
     i_df_k = pd.read_csv(k_url, sep=";", index_col=False)
     j_list = list(zip(*[i_df_j[col] for col in i_df_j.columns[2:5]]))
@@ -43,13 +43,13 @@ def det_K_suit(f_url:str, k_url: str, R: int):
                 suit_j.append((j_dx,j_dy,j_dz))
     df = pd.DataFrame(list(zip(suit_j,suit_k)))
     df.columns = ["j-coordinate", "k-coordinate"]
-    output_path = r"data\k_pot_coord.csv" # type: ignore
+    output_path = output_file
     df.to_csv(output_path, sep=";", index=False)
     print(f"Done: The string url is: {output_path} (Has been rewritten)") # type: ignore
     return output_path
 
 # Determine K's that match and hence group subsequent J-coordinate with neighbouring
-def det_K_match(f_url, k_url):
+def det_K_match(f_url, k_url, output_file):
     i_df_j = pd.read_csv(f_url, sep=";", index_col=False)  # File with dx, dy, dz
     i_df_k = pd.read_csv(k_url, sep=";", index_col=False)  # File with j and k coordinates
     j_set = set(list(zip(*[i_df_j[col] for col in i_df_j.columns[2:5]])))
@@ -65,7 +65,7 @@ def det_K_match(f_url, k_url):
     df_k_filtered['j-tuple'] = j_tuples
     
     grouped = df_k_filtered.groupby('j-tuple')['k-tuple'].apply(list).reset_index()
-    output_path = r"data\neighbouring_k_to_j.csv"
+    output_path = output_file
     grouped.to_csv(output_path, sep=";", index=False, header=["j-coordinate", "k-coordinates"])
     print(f"Done: The string url is: {output_path} (Result)") # type: ignore
     # return grouped
