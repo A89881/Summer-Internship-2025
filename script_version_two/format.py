@@ -3,16 +3,42 @@ import pandas as pd
 # Converts the units for distance vectors to lattice intergers
 import csv
 from typing import Union, Tuple
+import chardet
+
+def detect_encoding(file_path: str, num_bytes: int = 1024) -> str:
+    with open(file_path, 'rb') as f:
+        raw = f.read(num_bytes)
+    return chardet.detect(raw)['encoding'] # type: ignore
 
 def format_data(url: str, output_file: str):
-    i_df = pd.read_csv(url, sep=r"\s+", index_col=False)
-    output_path = output_file
-    i_df.to_csv(output_path, sep=";", index=False)
-    print(f"Done: The string url is: {output_path} (Result)")
-    return output_path
+    # Try automatic encoding fallback
+    encoding = detect_encoding(url)
+    i_df = pd.read_csv(url, sep=r"\s+", index_col=False, encoding=encoding)
+    
+    # Fill NaNs and fix columns
+    if 'Jij' in i_df.columns:
+        i_df['Jij'] = i_df['Jij'].fillna(0.0)
+    else:
+        i_df['Jij'] = 0.0
 
-import csv
-from typing import Tuple
+    if 'χ⁰↑' not in i_df.columns and 'χ⁰↓' in i_df.columns:
+        i_df['χ⁰↑'] = i_df['χ⁰↓'].copy()  # copy down to up
+
+    # If χ⁰↑ exists but has NaNs (non-magnetic), copy from χ⁰↓
+    i_df['χ⁰↑'] = i_df['χ⁰↑'].fillna(i_df['χ⁰↓'])
+
+    # Make sure order and types are correct
+    i_df = i_df[['i', 'j', 'dx', 'dy', 'dz', 'Jij', 'χ⁰↑', 'χ⁰↓']]
+    i_df = i_df.astype({
+        'i': int, 'j': int,
+        'dx': int, 'dy': int, 'dz': int,
+        'Jij': float, 'χ⁰↑': float, 'χ⁰↓': float
+    })
+
+    # Save
+    i_df.to_csv(output_file, sep=";", index=False)
+    print(f"Done: The formatted data saved to: {output_file}")
+    return output_file
 
 def merge_format_and_xzz(
     format_file: str,

@@ -7,7 +7,7 @@ import time as t
 import os
 
 #Any file type as long as column seperated by space and not any other divisor
-url = r"data\chfile-1.dat"
+url = r"AFM-Cr\AFM-chfile.dat"
 base_folder = os.path.dirname(url)
 radius = 5
 min = -10
@@ -24,15 +24,16 @@ time_end = t.time()
 print(f"run time {time_end-time_start}") 
 time_start = t.time()
 phys_plot(X_file)
+Length_scale = 5.32988627
 plot_static_and_spin_decay(
     static_file=f_url,
     spin_file=X_file,
     transform_matrix=[
-        [-0.5, 0.5, 0.5],  # x-axis
-        [0.5, -0.5, 0.5],  # y-axis
-        [0.5, 0.5, -0.5]   # z-axis
+        [1.0, 0.0, 0.0],  # x-axis (row vector of x-unit vector)
+        [0.0, 1.0, 0.0],  # y-axis
+        [0.0, 0.0, 1.0]   # z-axis
     ],
-    scale_diagonal=[5.42, 5.42, 5.42],  # Example lattice scaling in a₀
+    scale_diagonal=[Length_scale, Length_scale, Length_scale],  # Example lattice scaling in a₀
     output_static=os.path.join(base_folder, "static_decay_plot.png"),
     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
