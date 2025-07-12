@@ -1,6 +1,6 @@
 from format import *
 from determine_k_site import *
-from solving_equation import *
+from solving_equation_json import *
 from thr_d_plot import *
 from decay_plot import *
 import time as t
@@ -12,16 +12,27 @@ base_folder = os.path.dirname(url)
 radius = 5
 min = -10
 max = 10
+shift_rules = {
+    (2, 1): (0.5, 0.5, 0.5),
+    (1, 2): (-0.5, -0.5, -0.5),
+    (1, 1): (0.0, 0.0, 0.0),
+    (2, 2): (0.0, 0.0, 0.0)
+}
 time_start = t.time()
 f_url = format_data(url, output_file=os.path.join(base_folder, "formated_data.csv"))
 k_pot_url = det_K_pot(min, max, radius, output_file=os.path.join(base_folder, "k_pot_coords.csv"))
-k_suit_url = det_K_suit(f_url, k_pot_url, radius, output_file=os.path.join(base_folder, "k_pot_coords.csv"))
-k_match_url = det_K_match(f_url, k_suit_url, output_file=os.path.join(base_folder, "neighbouring_k_to_j.csv"))
+k_suit_url = det_K_suit(f_url, k_pot_url, radius, output_file=os.path.join(base_folder, "k_pot_coords.csv"), shift_map=shift_rules)
+# k_match_url = det_K_match(f_url, k_suit_url, output_file=os.path.join(base_folder, "neighbouring_k_to_j.csv"))  
+
+k_match_url = det_K_match_json(f_url, k_suit_url, output_file=os.path.join(base_folder, "neighbouring_k_to_j.json"))  
+
 U_kernel = (2.0, 2.0, 0.0, 0.0)  # U↑↑, U↓↓, U↑↓, U↓↑
 X_file = compute_Xzz_all(f_url, k_match_url, U_kernel, output_file=os.path.join(base_folder, "xzz_output_iter.csv"), temp_txt=os.path.join(base_folder, "debug_iter.txt"))
 merge_format_and_xzz(f_url, X_file, output_file=os.path.join(base_folder, "formated_output.dat"))
 time_end = t.time()
 print(f"run time {time_end-time_start}") 
+
+#Graphical tools and visualisation
 time_start = t.time()
 phys_plot(X_file)
 Length_scale = 5.32988627
@@ -40,3 +51,15 @@ plot_static_and_spin_decay(
 )
 time_end = t.time()
 print(f"run time {time_end-time_start}") 
+
+# Generallized script run
+# compute_Xzz_all_site_dependent(
+#     xij_file='data/formated_data.csv',
+#     kfile='data/k_match.csv',
+#     U_params=[
+#         (2.0, 2.0, 0.0, 0.0),  # U for site type 1
+#         (1.5, 1.5, 0.0, 0.0)   # U for site type 2
+#     ],
+#     output_file='data/xzz_output.csv',
+#     temp_txt='data/debug_log.txt'
+# )
