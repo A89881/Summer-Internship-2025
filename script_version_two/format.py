@@ -37,7 +37,7 @@ def format_data(url: str, output_file: str):
 
     # Save
     i_df.to_csv(output_file, sep=";", index=False)
-    print(f"Done: The formatted data saved to: {output_file}")
+    print(f"Done: The string url is: {output_file}")
     return output_file
 
 def merge_format_and_xzz(

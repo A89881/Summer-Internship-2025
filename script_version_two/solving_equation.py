@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import ast
+import json
 from typing import Dict, List, Tuple
 
 def parse_xij_file(xij_path: str) -> Tuple[Dict[Tuple[float, float, float], float],
@@ -14,17 +15,29 @@ def parse_xij_file(xij_path: str) -> Tuple[Dict[Tuple[float, float, float], floa
         x_map_down[coord] = row['χ⁰↓']
     return x_map_up, x_map_down
 
-def parse_k_contrib_file(kfile_path: str) -> Dict[Tuple[float, float, float],
-                                                  List[Tuple[float, float, float]]]:
-    contrib_map = {}
-    with open(kfile_path, 'r') as f:
-        next(f)
-        for line in f:
-            j_str, k_str_list = line.strip().split(';')
-            j_coord = ast.literal_eval(j_str)
-            k_coords = ast.literal_eval(k_str_list)
-            contrib_map[j_coord] = k_coords
-    return contrib_map
+def parse_k_contrib_file(kfile_path: str) -> Dict[Tuple[float, float, float], List[Tuple[float, float, float]]]:
+    """
+    Parses the file containing j → [k₁, k₂, ...] mappings.
+    Supports both CSV (old format) and JSON (new format).
+    """
+    if kfile_path.endswith(".json"):
+        with open(kfile_path, 'r', encoding='utf-8') as f:
+            json_data = json.load(f)
+        return {
+            tuple(map(float, ast.literal_eval(j_str))): [tuple(k) for k in k_list]
+            for j_str, k_list in json_data.items()
+        } # type: ignore
+    else:
+        # Fallback to CSV logic
+        contrib_map = {}
+        with open(kfile_path, 'r') as f:
+            next(f)  # skip header
+            for line in f:
+                j_str, k_str_list = line.strip().split(';')
+                j_coord = ast.literal_eval(j_str)
+                k_coords = ast.literal_eval(k_str_list)
+                contrib_map[j_coord] = k_coords
+        return contrib_map
 
 def get_x_block(rel: Tuple[float, float, float],
                 x_map_up: Dict,
@@ -50,14 +63,15 @@ def compute_Kij_iterative(Xij: np.ndarray,
     raise RuntimeError("Kij iteration did not converge.")
 
 def compute_Xzz_all(xij_file: str,
-                              kfile: str,
-                              U_params: Tuple[float, float, float, float],
-                              output_file: str,
-                              temp_txt: str):
+                    kfile: str,
+                    U_params: Tuple[float, float, float, float],
+                    output_file: str,
+                    temp_txt: str):
     U = np.array([
         [U_params[0], U_params[2]],
         [U_params[3], U_params[1]]
     ])
+
     x_map_up, x_map_down = parse_xij_file(xij_file)
     contrib_map = parse_k_contrib_file(kfile)
     results = []
@@ -67,21 +81,16 @@ def compute_Xzz_all(xij_file: str,
             if not k_coords:
                 continue
             try:
-                # Get Xij
                 xij_up, xij_down = get_x_block(j_coord, x_map_up, x_map_down)
                 Xij = np.diag([xij_up, xij_down])
 
-                # Sum of Xik_q
                 Xik_list = []
                 for kq in k_coords:
                     rel = tuple(np.subtract(kq, (0.0, 0.0, 0.0)))
                     x_up, x_down = get_x_block(rel, x_map_up, x_map_down)
                     Xik_list.append(np.diag([x_up, x_down]))
 
-                # Solve for Kij
                 Kij = compute_Kij_iterative(Xij, Xik_list, U)
-
-                # Compute χᶻᶻ
                 chi_zz = (Kij[0, 0] + Kij[1, 1] - Kij[0, 1] - Kij[1, 0]) / 4.0
                 results.append({'j-coordinate': str(j_coord), 'Xzz': chi_zz})
 
@@ -98,5 +107,5 @@ def compute_Xzz_all(xij_file: str,
 
     pd.DataFrame(results).to_csv(output_file, index=False)
     print(f"Done: The string url is: {output_file} (Result)")
-    print(f"Done: The string url is: {output_file} (Debug)")
+    print(f"Done: The string url is: {temp_txt} (Debug)")
     return output_file

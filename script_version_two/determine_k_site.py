@@ -1,5 +1,6 @@
 import pandas as pd # Datafram imports
 import ast  # For safely converting string tuples to actual tuples
+import json
 
 # Determine the range in which i and j are to each other 
 # (most likely symmetrical and known rangde)
@@ -24,53 +25,6 @@ def det_K_pot(min:int, max:int, R:int, output_file):
     df.to_csv(output_path, sep=";", index=False)
     print(f"Done: The string url is: {output_path} (Result)") # type: ignore
     return output_path
-
-
-# Determine K's in the proximity of R to j-coordinates
-# def det_K_suit(f_url:str, k_url: str, R: int, output_file):
-#     i_df_j = pd.read_csv(f_url, sep=";", index_col=False)
-#     i_df_k = pd.read_csv(k_url, sep=";", index_col=False)
-#     j_list = list(zip(*[i_df_j[col] for col in i_df_j.columns[2:5]]))
-#     k_list = list(zip(*[i_df_k[col] for col in i_df_k.columns]))
-#     suit_k = []
-#     suit_j = []
-    
-#     for _, (j_dx, j_dy, j_dz) in enumerate(j_list):
-#         for _, (k_dx, k_dy, k_dz) in enumerate(k_list):
-#             val = j_dx**2+j_dy**2+j_dz**2+k_dx**2+k_dy**2+k_dz**2-2*(j_dx*k_dx+j_dy*k_dy+j_dz*k_dz) 
-#             if 0 < val <= 25:
-#                 suit_k.append((k_dx,k_dy,k_dz))
-#                 suit_j.append((j_dx,j_dy,j_dz))
-#     df = pd.DataFrame(list(zip(suit_j,suit_k)))
-#     df.columns = ["j-coordinate", "k-coordinate"]
-#     output_path = output_file
-#     df.to_csv(output_path, sep=";", index=False)
-#     print(f"Done: The string url is: {output_path} (Has been rewritten)") # type: ignore
-#     return output_path
-
-
-# Determine K's that match and hence group subsequent J-coordinate with neighbouring
-# def det_K_match(f_url, k_url, output_file):
-#     i_df_j = pd.read_csv(f_url, sep=";", index_col=False)  # File with dx, dy, dz
-#     i_df_k = pd.read_csv(k_url, sep=";", index_col=False)  # File with j and k coordinates
-#     j_set = set(list(zip(*[i_df_j[col] for col in i_df_j.columns[2:5]])))
-    
-#     # Convert k-coordinate strings to tuples (e.g., "(-5, 0, 0)" → (-5.0, 0.0, 0.0))
-#     k_list_k = i_df_k['k-coordinate'].apply(lambda x: tuple(map(float, ast.literal_eval(x))))
-#     i_df_k['k-tuple'] = k_list_k  # Store as a new column
-#     df_k_filtered = i_df_k[i_df_k['k-tuple'].isin(j_set)]
-    
-#     # Group matching k-coordinates by j-coordinate
-#     # Convert j-coordinate strings to tuples (same as k-coordinate)
-#     j_tuples = i_df_k['j-coordinate'].apply(lambda x: tuple(map(float, ast.literal_eval(x))))
-#     df_k_filtered['j-tuple'] = j_tuples
-    
-#     grouped = df_k_filtered.groupby('j-tuple')['k-tuple'].apply(list).reset_index()
-#     output_path = output_file
-#     grouped.to_csv(output_path, sep=";", index=False, header=["j-coordinate", "k-coordinates"])
-#     print(f"Done: The string url is: {output_path} (Result)") # type: ignore
-#     # return grouped
-#     return output_path
 
 # === Step 2: Determine suitable K-sites near each j ===
 def det_K_suit(
@@ -113,49 +67,62 @@ def det_K_suit(
     return output_file
 
 # === Step 3: Group suitable K by J (match step) ===
-import pandas as pd
-import ast
-import json
 
 def det_K_match_json(f_url: str, k_url: str, output_file: str) -> str:
     """
     Generate a JSON file mapping each j-site to its contributing k-sites.
-    Inputs:
-        f_url: CSV file with formatted dx,dy,dz and site metadata.
-        k_url: CSV file with valid (j, k) pairs.
-        output_file: Path to save the output JSON.
-    Returns:
-        Path to the JSON file created.
+    Input CSVs must contain columns: 'dx','dy','dz' and 'j-coordinate','k-coordinate'.
     """
-    # Load input CSVs
-    i_df_j = pd.read_csv(f_url, sep=";", index_col=False)
-    i_df_k = pd.read_csv(k_url, sep=";", index_col=False)
-
-    # Build a set of all known j-sites from formatted file
-    j_set = set(zip(i_df_j["dx"], i_df_j["dy"], i_df_j["dz"]))
+    # === Load files ===
+    df_formatted = pd.read_csv(f_url, sep=";", index_col=False)
+    df_matches = pd.read_csv(k_url, sep=";", index_col=False)
 
     # Convert coordinate strings to tuples
-    i_df_k['k-tuple'] = i_df_k['k-coordinate'].apply(lambda s: tuple(map(float, ast.literal_eval(s))))
-    i_df_k['j-tuple'] = i_df_k['j-coordinate'].apply(lambda s: tuple(map(float, ast.literal_eval(s))))
+    df_matches['j-tuple'] = df_matches['j-coordinate'].apply(lambda s: tuple(map(float, ast.literal_eval(s))))
+    df_matches['k-tuple'] = df_matches['k-coordinate'].apply(lambda s: tuple(map(float, ast.literal_eval(s))))
 
-    # Filter to only k's that exist in dataset
-    df_k_filtered = i_df_k[i_df_k['k-tuple'].isin(j_set)]
+    # Ensure j-tuple exists in the formatted data
+    known_j_coords = set(tuple(row) for row in df_formatted[['dx', 'dy', 'dz']].values)
 
-    # Group k-tuples under each j-tuple
+    # Filter valid matches where the k-site exists in the system
+    df_valid = df_matches[df_matches['k-tuple'].isin(known_j_coords)]
+
+    # Group k-sites by j-tuple
     grouped_dict = {}
-    for _, row in df_k_filtered.iterrows():
+    for _, row in df_valid.iterrows():
         j = row['j-tuple']
         k = row['k-tuple']
         grouped_dict.setdefault(j, []).append(k)
 
-    # Convert keys and values to JSON-friendly format
-    json_ready = {
-        str(j): [list(k) for k in k_list] for j, k_list in grouped_dict.items()
-    }
+    # Convert to JSON-safe format: tuple → str keys, tuple → list values
+    json_ready = {str(j): [list(k) for k in k_list] for j, k_list in grouped_dict.items()}
 
-    # Save as JSON
+    # Save to JSON
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(json_ready, f, indent=2)
 
     print(f"Done: The string url is: {output_file} (Result)") # type: ignore
     return output_file
+
+# Determine K's that match and hence group subsequent J-coordinate with neighbouring
+def det_K_match(f_url, k_url, output_file):
+    i_df_j = pd.read_csv(f_url, sep=";", index_col=False)  # File with dx, dy, dz
+    i_df_k = pd.read_csv(k_url, sep=";", index_col=False)  # File with j and k coordinates
+    j_set = set(list(zip(*[i_df_j[col] for col in i_df_j.columns[2:5]])))
+    
+    # Convert k-coordinate strings to tuples (e.g., "(-5, 0, 0)" → (-5.0, 0.0, 0.0))
+    k_list_k = i_df_k['k-coordinate'].apply(lambda x: tuple(map(float, ast.literal_eval(x))))
+    i_df_k['k-tuple'] = k_list_k  # Store as a new column
+    df_k_filtered = i_df_k[i_df_k['k-tuple'].isin(j_set)]
+    
+    # Group matching k-coordinates by j-coordinate
+    # Convert j-coordinate strings to tuples (same as k-coordinate)
+    j_tuples = i_df_k['j-coordinate'].apply(lambda x: tuple(map(float, ast.literal_eval(x))))
+    df_k_filtered['j-tuple'] = j_tuples
+    
+    grouped = df_k_filtered.groupby('j-tuple')['k-tuple'].apply(list).reset_index()
+    output_path = output_file
+    grouped.to_csv(output_path, sep=";", index=False, header=["j-coordinate", "k-coordinates"])
+    print(f"Done: The string url is: {output_path} (Debugg)") # type: ignore
+    # return grouped
+    return output_path

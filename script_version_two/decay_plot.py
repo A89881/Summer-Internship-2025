@@ -61,7 +61,7 @@ def plot_static_and_spin_decay(
     plt.ylabel("χ⁰ (static avg)")
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.tight_layout()
-    plt.savefig(output_static, dpi=300)
+    plt.savefig(output_static, dpi=100)
     plt.close()
     print(f"Static decay plot saved to: {output_static}")
     
@@ -79,7 +79,7 @@ def plot_static_and_spin_decay(
     plt.ylabel("χᶻᶻ (longitudinal)")
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.tight_layout()
-    plt.savefig(output_xzz, dpi=300)
+    plt.savefig(output_xzz, dpi=100)
     plt.show()
     print(f"χzz-only decay plot saved to: {output_xzz}")
 
@@ -95,7 +95,7 @@ def plot_static_and_spin_decay(
     plt.legend()
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.tight_layout()
-    plt.savefig(output_comparison, dpi=300)
+    plt.savefig(output_comparison, dpi=100)
     plt.show()
     print(f"Comparison decay plot saved to: {output_comparison}")
 
