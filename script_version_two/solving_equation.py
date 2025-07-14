@@ -17,24 +17,26 @@ def parse_xij_file(xij_path: str) -> Tuple[Dict[Tuple[float, float, float], floa
 
 def parse_k_contrib_file(kfile_path: str) -> Dict[Tuple[float, float, float], List[Tuple[float, float, float]]]:
     """
-    Parses the file containing j → [k₁, k₂, ...] mappings.
-    Supports both CSV (old format) and JSON (new format).
+    Parses j → [k₁, k₂, ...] mapping from JSON or CSV and ensures float-typed keys consistently.
     """
+    def to_float_tuple(t) -> Tuple[float, float, float]:
+        return tuple(float(x) for x in t) # type: ignore
+
     if kfile_path.endswith(".json"):
         with open(kfile_path, 'r', encoding='utf-8') as f:
             json_data = json.load(f)
         return {
-            tuple(map(float, ast.literal_eval(j_str))): [tuple(k) for k in k_list]
+            to_float_tuple(ast.literal_eval(j_str)): [to_float_tuple(k) for k in k_list]
             for j_str, k_list in json_data.items()
-        } # type: ignore
+        }
     else:
         contrib_map = {}
         with open(kfile_path, 'r') as f:
-            next(f)  # skip header
+            next(f)
             for line in f:
                 j_str, k_str_list = line.strip().split(';')
-                j_coord = ast.literal_eval(j_str)
-                k_coords = ast.literal_eval(k_str_list)
+                j_coord = to_float_tuple(ast.literal_eval(j_str))
+                k_coords = [to_float_tuple(k) for k in ast.literal_eval(k_str_list)]
                 contrib_map[j_coord] = k_coords
         return contrib_map
 
@@ -50,7 +52,7 @@ def get_x_block(rel: Tuple[float, float, float],
 def compute_Kij_iterative(Xij: np.ndarray,
                           Xik_list: List[np.ndarray],
                           U: np.ndarray,
-                          max_iter: int = 100,
+                          max_iter: int = 1000,
                           tol: float = 1e-8) -> np.ndarray:
     S = sum(Xik_list)
     Kij = Xij.copy()
@@ -84,6 +86,9 @@ def compute_Xzz_all(xij_file: str,
                 Xij = np.diag([xij_up, xij_down])
 
                 Xik_list = []
+                
+                 # Ensure deterministic k-order and safe float coordinates
+                # k_coords = sorted([kq for kq in k_coords])
                 for kq in k_coords:
                     rel = tuple(np.subtract(kq, (0.0, 0.0, 0.0)))
                     x_up, x_down = get_x_block(rel, x_map_up, x_map_down)
