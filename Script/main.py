@@ -30,7 +30,7 @@ k_suit_url = det_K_suit(f_url, k_pot_url, radius, output_file=os.path.join(base_
 """
 K - MATCH JSON for Calculation but K - MATCH for CSV output
 """
-# k_match_url = det_K_match(f_url, k_suit_url, output_file=os.path.join(base_folder, "neighbouring_k_to_j.csv"))  
+# k_match_url = det_K_match_csv(f_url, k_suit_url, output_file=os.path.join(base_folder, "neighbouring_k_to_j.csv"))  
 k_match_url = det_K_match_json(f_url, k_suit_url, output_file=os.path.join(base_folder, "neighbouring_k_to_j.json"))  
 
 U_kernel = (2.0, 2.0, 0.0, 0.0)  # U↑↑, U↓↓, U↑↓, U↓↑

@@ -7,7 +7,7 @@ import json
 # Assume if i is origin also --> rij = (dx-0, dy-0, dz-0)
 # Determine possible K that are smaller than R^2
 
-# Determine Potential K's smaller than 5 in size
+# Determine Potential K's smaller than R in size
 def det_K_pot(min:int, max:int, R:int, output_file):
     k_x_vals = []
     k_y_vals = []
@@ -101,7 +101,7 @@ def det_K_match_json(f_url: str, k_url: str, output_file: str) -> str:
     return output_file
 
 # Determine K's that match and hence group subsequent J-coordinate with neighbouring
-def det_K_match(f_url, k_url, output_file):
+def det_K_match_csv(f_url, k_url, output_file):
     i_df_j = pd.read_csv(f_url, sep=";", index_col=False)  # File with dx, dy, dz
     i_df_k = pd.read_csv(k_url, sep=";", index_col=False)  # File with j and k coordinates
     j_set = set(list(zip(*[i_df_j[col] for col in i_df_j.columns[2:5]])))
