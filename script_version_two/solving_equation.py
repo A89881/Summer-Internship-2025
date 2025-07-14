@@ -28,7 +28,6 @@ def parse_k_contrib_file(kfile_path: str) -> Dict[Tuple[float, float, float], Li
             for j_str, k_list in json_data.items()
         } # type: ignore
     else:
-        # Fallback to CSV logic
         contrib_map = {}
         with open(kfile_path, 'r') as f:
             next(f)  # skip header
