@@ -7,14 +7,18 @@ import time as t
 import os
 
 #Any file type as long as column seperated by space and not any other divisor
-url = r"AFM-Cr\AFM-chfile.dat"
+# url = r"AFM-Cr\AFM-chfile.dat"
+# url = r"Bcc-Fe\chfile-1.dat"
+url = r"NM-Cr\NM-chfile-1.dat"
 base_folder = os.path.dirname(url)
 radius = 5
 min = -10
 max = 10
 shift_rules = {
-    (2, 1): (0.5, 0.5, 0.5),
-    (1, 2): (-0.5, -0.5, -0.5),
+    # (2, 1): (0.5, 0.5, 0.5),
+    # (1, 2): (-0.5, -0.5, -0.5),
+    (2, 1): (0.0, 0.0, 0.0),
+    (1, 2): (0.0, 0.0, 0.0),
     (1, 1): (0.0, 0.0, 0.0),
     (2, 2): (0.0, 0.0, 0.0)
 }
@@ -54,6 +58,8 @@ plot_static_and_spin_decay(
     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
 )
+time_end = t.time()
+print(f"run time {time_end-time_start}") 
 
 """Bcc-Fe - PLOT DATA"""
 # Length_scale = 5.42
@@ -90,8 +96,8 @@ plot_static_and_spin_decay(
 #     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
 # )
 
-time_end = t.time()
-print(f"run time {time_end-time_start}") 
+# time_end = t.time()
+# print(f"run time {time_end-time_start}") 
 
 """Generallized script run"""
 # compute_Xzz_all_site_dependent(

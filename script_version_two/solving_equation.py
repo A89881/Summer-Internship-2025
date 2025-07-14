@@ -49,19 +49,41 @@ def get_x_block(rel: Tuple[float, float, float],
     x_down = x_map_down.get(rel, 0.0)
     return x_up, x_down
 
-def compute_Kij_iterative(Xij: np.ndarray,
-                          Xik_list: List[np.ndarray],
-                          U: np.ndarray,
-                          max_iter: int = 1000,
-                          tol: float = 1e-8) -> np.ndarray:
+# def compute_Kij_iterative(Xij: np.ndarray,
+#                           Xik_list: List[np.ndarray],
+#                           U: np.ndarray,
+#                           max_iter: int = 1000,
+#                           tol: float = 1e-8) -> np.ndarray:
+#     S = sum(Xik_list)
+#     Kij = Xij.copy()
+#     for _ in range(max_iter):
+#         Kij_new = Xij + S @ U @ Kij
+#         if np.linalg.norm(Kij_new - Kij, ord='fro') < tol:
+#             return Kij_new
+#         Kij = Kij_new
+#     raise RuntimeError("Kij iteration did not converge.")
+
+import numpy as np
+from typing import List
+
+def compute_Kij_direct(Xij: np.ndarray,
+                       Xik_list: List[np.ndarray],
+                       U: np.ndarray) -> np.ndarray:
+    """
+    Solves the Dyson-like equation directly using matrix inversion:
+        Kij = (I - S·U)^(-1) · Xij
+    where S = sum(Xik_list)
+    """
     S = sum(Xik_list)
-    Kij = Xij.copy()
-    for _ in range(max_iter):
-        Kij_new = Xij + S @ U @ Kij
-        if np.linalg.norm(Kij_new - Kij, ord='fro') < tol:
-            return Kij_new
-        Kij = Kij_new
-    raise RuntimeError("Kij iteration did not converge.")
+    identity = np.eye(2)
+
+    try:
+        A = identity - S @ U
+        Kij = np.linalg.solve(A, Xij)
+        return Kij
+    except np.linalg.LinAlgError:
+        raise RuntimeError("Direct solver failed: matrix may be singular or ill-conditioned.")
+
 
 def compute_Xzz_all(xij_file: str,
                     kfile: str,
@@ -94,7 +116,8 @@ def compute_Xzz_all(xij_file: str,
                     x_up, x_down = get_x_block(rel, x_map_up, x_map_down)
                     Xik_list.append(np.diag([x_up, x_down]))
 
-                Kij = compute_Kij_iterative(Xij, Xik_list, U)
+                # Kij = compute_Kij_iterative(Xij, Xik_list, U)
+                Kij = compute_Kij_direct(Xij, Xik_list, U)
                 chi_zz = (Kij[0, 0] + Kij[1, 1] - Kij[0, 1] - Kij[1, 0]) / 4.0
                 results.append({'j-coordinate': str(j_coord), 'Xzz': chi_zz})
 
