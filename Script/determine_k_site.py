@@ -1,6 +1,7 @@
 import pandas as pd # Datafram imports
 import ast  # For safely converting string tuples to actual tuples
 import json
+from typing import Optional
 
 # Determine the range in which i and j are to each other 
 # (most likely symmetrical and known rangde)
@@ -27,14 +28,29 @@ def det_K_pot(min:int, max:int, R:int, output_file):
     return output_path
 
 # === Step 2: Determine suitable K-sites near each j ===
-def det_K_suit(f_url: str,k_url: str,R: int,output_file: str,
-    shift_map: dict = None) -> str: # type: ignore
-    shift_map = shift_map or {}
+def det_K_suit(f_url: str,
+               k_url: str,
+               R: int,
+               output_file: str,
+               shift_map: Optional[dict] = None) -> str:
+    """
+    Determine suitable k-sites for each j-site with optional site-dependent sublattice shifts.
 
+    Args:
+        f_url: Path to formatted input CSV with i, j, dx, dy, dz.
+        k_url: Path to CSV containing potential k-site displacements (k_dx, k_dy, k_dz).
+        R: Cutoff radius.
+        output_file: Path to save resulting j-k mapping.
+        shift_map: Optional dictionary {(i_site, j_site): (dx_shift, dy_shift, dz_shift)}.
+                   Defaults to 0 shift if not provided.
+
+    Returns:
+        Path to output CSV with columns ['j-coordinate', 'k-coordinate'].
     """
-    shift_map: Optional dictionary like {(1,2): (-0.5, -0.5, -0.5), (2,1): (0.5, 0.5, 0.5)}
-               if not provided, defaults to 0-vector for all pairs.
-    """
+    # Ensure fallback shift_map
+    if shift_map is None:
+        shift_map = {}
+
     df_j = pd.read_csv(f_url, sep=";", index_col=False)
     df_k = pd.read_csv(k_url, sep=";", index_col=False)
 

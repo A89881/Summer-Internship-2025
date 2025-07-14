@@ -7,28 +7,28 @@ import time as t
 import os
 
 #Any file type as long as column seperated by space and not any other divisor
-# url = r"AFM-Cr\AFM-chfile.dat"
+url = r"AFM-Cr\AFM-chfile.dat"
 # url = r"Bcc-Fe\chfile-1.dat"
-url = r"NM-Cr\NM-chfile-1.dat"
+# url = r"NM-Cr\NM-chfile-1.dat"
 base_folder = os.path.dirname(url)
 radius = 5
 min = -10
 max = 10
 shift_rules = {
-    # (2, 1): (0.5, 0.5, 0.5),
-    # (1, 2): (-0.5, -0.5, -0.5),
-    (2, 1): (0.0, 0.0, 0.0),
-    (1, 2): (0.0, 0.0, 0.0),
+    (2, 1): (0.5, 0.5, 0.5),
+    (1, 2): (-0.5, -0.5, -0.5),
+    # (2, 1): (0.0, 0.0, 0.0),
+    # (1, 2): (0.0, 0.0, 0.0),
     (1, 1): (0.0, 0.0, 0.0),
     (2, 2): (0.0, 0.0, 0.0)
 }
 time_start = t.time()
 f_url = format_data(url, output_file=os.path.join(base_folder, "formated_data.csv"))
 k_pot_url = det_K_pot(min, max, radius, output_file=os.path.join(base_folder, "k_pot_coords.csv"))
-k_suit_url = det_K_suit(f_url, k_pot_url, radius, output_file=os.path.join(base_folder, "k_pot_coords.csv"), shift_map=shift_rules)
+k_suit_url = det_K_suit(f_url, k_pot_url, radius, output_file=os.path.join(base_folder, "k_pot_coords.csv"))
 
 """
-K - MATCH JSON for Calculation but K - MATCH for CSV output
+det_k_match_json for calculation, but det_k_match for csv output (easier to look interpret)
 """
 # k_match_url = det_K_match_csv(f_url, k_suit_url, output_file=os.path.join(base_folder, "neighbouring_k_to_j.csv"))  
 k_match_url = det_K_match_json(f_url, k_suit_url, output_file=os.path.join(base_folder, "neighbouring_k_to_j.json"))  
