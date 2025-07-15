@@ -1,8 +1,6 @@
 import pandas as pd
-# Reads data-set and formatts the columnns correctly
-# Converts the units for distance vectors to lattice intergers
 import csv
-from typing import Optional, Union, Tuple, Dict
+from typing import Optional, Tuple, Dict
 import chardet
 
 def detect_encoding(file_path: str, num_bytes: int = 1024) -> str:
@@ -12,92 +10,56 @@ def detect_encoding(file_path: str, num_bytes: int = 1024) -> str:
 
 def format_data(url: str,
                 output_file: str,
-                shift_map: Optional[Dict[Tuple[int, int], Tuple[float, float, float]]] = None) -> str:
+                shift_map: Optional[Dict[Tuple[int, int], Tuple[float, float, float]]] = None,
+                scale_response: float = -1.0) -> str:
     """
-    Load, clean, and optionally shift coordinate data based on site (i,j) rules. 
+    Load, clean, shift, and optionally scale response data.
+
     Args:
-        url: Raw input file (whitespace-separated).
-        output_file: Destination path for formatted data.
-        shift_map: Optional dictionary of (i,j) → (dx,dy,dz) coordinate shift.
+        url: Path to raw input data (whitespace-separated).
+        output_file: Destination CSV path.
+        shift_map: Optional site-wise coordinate shift {(i,j): (dx,dy,dz)}.
+        scale_response: Multiplier for χ⁰↑ and χ⁰↓ (e.g. -1 to invert signs).
 
     Returns:
-        Path to formatted CSV file with applied shifts.
+        Path to the saved formatted CSV.
     """
     if shift_map is None:
         shift_map = {}
 
-    # Detect encoding and load raw file
     encoding = detect_encoding(url)
     df = pd.read_csv(url, sep=r"\s+", index_col=False, encoding=encoding)
 
-    # Add missing columns with fallback
-    if 'Jij' not in df.columns:
-        df['Jij'] = 0.0
-    else:
-        df['Jij'] = df['Jij'].fillna(0.0)
-
+    # Add missing or fallback columns
+    df['Jij'] = df.get('Jij', 0.0).fillna(0.0) # type: ignore
     if 'χ⁰↑' not in df.columns and 'χ⁰↓' in df.columns:
         df['χ⁰↑'] = df['χ⁰↓'].copy()
-
     df['χ⁰↑'] = df['χ⁰↑'].fillna(df['χ⁰↓'])
 
-    # Reorder and cast types
-    df = df[['i', 'j', 'dx', 'dy', 'dz', 'Jij', 'χ⁰↑', 'χ⁰↓']]
-    df = df.astype({
+    # Enforce column order and types
+    df = df[['i', 'j', 'dx', 'dy', 'dz', 'Jij', 'χ⁰↑', 'χ⁰↓']].astype({
         'i': int, 'j': int,
         'dx': float, 'dy': float, 'dz': float,
         'Jij': float, 'χ⁰↑': float, 'χ⁰↓': float
     })
 
-    # Apply sublattice-based coordinate shifts
-    shifted_coords = []
+    # Apply site-dependent coordinate shift
+    shifted = []
     for _, row in df.iterrows():
-        i_site = row['i']
-        j_site = row['j']
+        i_site, j_site = row['i'], row['j']
         dx, dy, dz = row['dx'], row['dy'], row['dz']
         shift = shift_map.get((i_site, j_site), (0.0, 0.0, 0.0))
-        shifted_coords.append((
-            dx + shift[0],
-            dy + shift[1],
-            dz + shift[2]
-        ))
+        shifted.append((dx + shift[0], dy + shift[1], dz + shift[2]))
+    df[['dx', 'dy', 'dz']] = pd.DataFrame(shifted, index=df.index)
 
-    df[['dx', 'dy', 'dz']] = pd.DataFrame(shifted_coords, index=df.index)
+    # Apply scaling to static response columns
+    df['χ⁰↑'] *= scale_response
+    df['χ⁰↓'] *= scale_response
 
-    # Save formatted output
+    # Save and return
     df.to_csv(output_file, sep=';', index=False)
-    print(f"Done: The string url is: {output_file} (Shift-augmented)")
+    print(f"Done: The string url is: {output_file} (Shift-augmented, Scaled={scale_response})")
     return output_file
-
-# def format_data(url: str, output_file: str):
-#     # Try automatic encoding fallback
-#     encoding = detect_encoding(url)
-#     i_df = pd.read_csv(url, sep=r"\s+", index_col=False, encoding=encoding)
-    
-#     # Fill NaNs and fix columns
-#     if 'Jij' in i_df.columns:
-#         i_df['Jij'] = i_df['Jij'].fillna(0.0)
-#     else:
-#         i_df['Jij'] = 0.0
-
-#     if 'χ⁰↑' not in i_df.columns and 'χ⁰↓' in i_df.columns:
-#         i_df['χ⁰↑'] = i_df['χ⁰↓'].copy()  # copy down to up
-
-#     # If χ⁰↑ exists but has NaNs (non-magnetic), copy from χ⁰↓
-#     i_df['χ⁰↑'] = i_df['χ⁰↑'].fillna(i_df['χ⁰↓'])
-
-#     # Make sure order and types are correct
-#     i_df = i_df[['i', 'j', 'dx', 'dy', 'dz', 'Jij', 'χ⁰↑', 'χ⁰↓']]
-#     i_df = i_df.astype({
-#         'i': int, 'j': int,
-#         'dx': int, 'dy': int, 'dz': int,
-#         'Jij': float, 'χ⁰↑': float, 'χ⁰↓': float
-#     })
-
-#     # Save
-#     i_df.to_csv(output_file, sep=";", index=False)
-#     print(f"Done: The string url is: {output_file}")
-#     return output_file
 
 def merge_format_and_xzz(
     format_file: str,
