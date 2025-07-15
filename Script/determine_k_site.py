@@ -27,56 +27,97 @@ def det_K_pot(min:int, max:int, R:int, output_file):
     print(f"Done: The string url is: {output_path} (Result)") # type: ignore
     return output_path
 
-# === Step 2: Determine suitable K-sites near each j ===
 def det_K_suit(f_url: str,
                k_url: str,
                R: int,
-               output_file: str,
-               shift_map: Optional[dict] = None) -> str:
+               output_file: str) -> str:
     """
-    Determine suitable k-sites for each j-site with optional site-dependent sublattice shifts.
+    Determines valid (j, k) pairs where k lies within radius R of j.
+    Now assumes dx,dy,dz have already been shifted in `format_data`.
 
     Args:
-        f_url: Path to formatted input CSV with i, j, dx, dy, dz.
-        k_url: Path to CSV containing potential k-site displacements (k_dx, k_dy, k_dz).
-        R: Cutoff radius.
-        output_file: Path to save resulting j-k mapping.
-        shift_map: Optional dictionary {(i_site, j_site): (dx_shift, dy_shift, dz_shift)}.
-                   Defaults to 0 shift if not provided.
+        f_url: Path to formatted file with shifted dx,dy,dz.
+        k_url: Path to file with k_dx, k_dy, k_dz.
+        R: Cutoff radius for neighborhood.
+        output_file: Destination path for matched j-k pairs.
 
     Returns:
-        Path to output CSV with columns ['j-coordinate', 'k-coordinate'].
+        Path to output CSV with 'j-coordinate', 'k-coordinate' columns.
     """
-    # Ensure fallback shift_map
-    if shift_map is None:
-        shift_map = {}
-
     df_j = pd.read_csv(f_url, sep=";", index_col=False)
     df_k = pd.read_csv(k_url, sep=";", index_col=False)
 
-    j_tuples = list(zip(df_j["i"], df_j["j"], df_j["dx"], df_j["dy"], df_j["dz"]))
-    k_tuples = list(zip(df_k["k_dx"], df_k["k_dy"], df_k["k_dz"]))
+    j_coords = list(zip(df_j["dx"], df_j["dy"], df_j["dz"]))
+    k_coords = list(zip(df_k["k_dx"], df_k["k_dy"], df_k["k_dz"]))
 
-    j_coords = []
-    k_coords = []
+    matched_j = []
+    matched_k = []
 
-    for (i_site, j_site, j_dx, j_dy, j_dz) in j_tuples:
-        shift = shift_map.get((i_site, j_site), (0.0, 0.0, 0.0))
-
-        for (k_dx, k_dy, k_dz) in k_tuples:
-            kx_s, ky_s, kz_s = k_dx + shift[0], k_dy + shift[1], k_dz + shift[2]
-            dist2 = (j_dx - kx_s)**2 + (j_dy - ky_s)**2 + (j_dz - kz_s)**2
+    for j in j_coords:
+        for k in k_coords:
+            dist2 = sum((j_i - k_i)**2 for j_i, k_i in zip(j, k))
             if 0 < dist2 <= R**2:
-                j_coords.append((j_dx, j_dy, j_dz))
-                k_coords.append((k_dx, k_dy, k_dz))
+                matched_j.append(j)
+                matched_k.append(k)
 
-    df = pd.DataFrame({
-        "j-coordinate": [str(j) for j in j_coords],
-        "k-coordinate": [str(k) for k in k_coords]
+    df_out = pd.DataFrame({
+        "j-coordinate": [str(j) for j in matched_j],
+        "k-coordinate": [str(k) for k in matched_k]
     })
-    df.to_csv(output_file, sep=";", index=False)
-    print(f"Done: The string url is: {output_file} (Has been rewritten)")
+    df_out.to_csv(output_file, sep=";", index=False)
+    print(f"Done: The string url is: {output_file} (Result)")
     return output_file
+
+# === Step 2: Determine suitable K-sites near each j ===
+# def det_K_suit(f_url: str,
+#                k_url: str,
+#                R: int,
+#                output_file: str,
+#                shift_map: Optional[dict] = None) -> str:
+#     """
+#     Determine suitable k-sites for each j-site with optional site-dependent sublattice shifts.
+
+#     Args:
+#         f_url: Path to formatted input CSV with i, j, dx, dy, dz.
+#         k_url: Path to CSV containing potential k-site displacements (k_dx, k_dy, k_dz).
+#         R: Cutoff radius.
+#         output_file: Path to save resulting j-k mapping.
+#         shift_map: Optional dictionary {(i_site, j_site): (dx_shift, dy_shift, dz_shift)}.
+#                    Defaults to 0 shift if not provided.
+
+#     Returns:
+#         Path to output CSV with columns ['j-coordinate', 'k-coordinate'].
+#     """
+#     # Ensure fallback shift_map
+#     if shift_map is None:
+#         shift_map = {}
+
+#     df_j = pd.read_csv(f_url, sep=";", index_col=False)
+#     df_k = pd.read_csv(k_url, sep=";", index_col=False)
+
+#     j_tuples = list(zip(df_j["i"], df_j["j"], df_j["dx"], df_j["dy"], df_j["dz"]))
+#     k_tuples = list(zip(df_k["k_dx"], df_k["k_dy"], df_k["k_dz"]))
+
+#     j_coords = []
+#     k_coords = []
+
+#     for (i_site, j_site, j_dx, j_dy, j_dz) in j_tuples:
+#         shift = shift_map.get((i_site, j_site), (0.0, 0.0, 0.0))
+
+#         for (k_dx, k_dy, k_dz) in k_tuples:
+#             kx_s, ky_s, kz_s = k_dx + shift[0], k_dy + shift[1], k_dz + shift[2]
+#             dist2 = (j_dx - kx_s)**2 + (j_dy - ky_s)**2 + (j_dz - kz_s)**2
+#             if 0 < dist2 <= R**2:
+#                 j_coords.append((j_dx, j_dy, j_dz))
+#                 k_coords.append((k_dx, k_dy, k_dz))
+
+#     df = pd.DataFrame({
+#         "j-coordinate": [str(j) for j in j_coords],
+#         "k-coordinate": [str(k) for k in k_coords]
+#     })
+#     df.to_csv(output_file, sep=";", index=False)
+#     print(f"Done: The string url is: {output_file} (Has been rewritten)")
+#     return output_file
 
 
 # === Step 3: Group suitable K by J (match step) ===

@@ -23,7 +23,7 @@ shift_rules = {
     (2, 2): (0.0, 0.0, 0.0)
 }
 time_start = t.time()
-f_url = format_data(url, output_file=os.path.join(base_folder, "formated_data.csv"))
+f_url = format_data(url, output_file=os.path.join(base_folder, "formated_data.csv"), shift_map=shift_rules)
 k_pot_url = det_K_pot(min, max, radius, output_file=os.path.join(base_folder, "k_pot_coords.csv"))
 k_suit_url = det_K_suit(f_url, k_pot_url, radius, output_file=os.path.join(base_folder, "k_pot_coords.csv"))
 
