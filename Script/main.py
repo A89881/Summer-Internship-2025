@@ -7,28 +7,42 @@ import time as t
 import os
 
 #Any file type as long as column seperated by space and not any other divisor
-url = r"AFM-Cr\AFM-chfile.dat"
+# url = r"AFM-Cr\AFM-chfile.dat"
 # url = r"Bcc-Fe\chfile-1.dat"
-# url = r"NM-Cr\NM-chfile-1.dat"
+url = r"NM-Cr\NM-chfile-1.dat"
 base_folder = os.path.dirname(url)
 radius = 5
 min = -10
 max = 10
 shift_rules = {
-    (2, 1): (0.5, 0.5, 0.5),
-    (1, 2): (-0.5, -0.5, -0.5),
-    # (2, 1): (0.0, 0.0, 0.0),
-    # (1, 2): (0.0, 0.0, 0.0),
+    # (2, 1): (0.5, 0.5, 0.5),
+    # (1, 2): (-0.5, -0.5, -0.5),
+    (2, 1): (0.0, 0.0, 0.0),
+    (1, 2): (0.0, 0.0, 0.0),
     (1, 1): (0.0, 0.0, 0.0),
     (2, 2): (0.0, 0.0, 0.0)
 }
+
+# base_change_matrix = [
+#         [1.0, 0.0, 0.0],  # x-axis (row vector of x-unit vector)
+#         [0.0, 1.0, 0.0],  # y-axis
+#         [0.0, 0.0, 1.0]   # z-axis
+#     ]
+
+base_change_matrix = [
+        [1.0, 0.0, 0.0],  # x-axis (row vector of x-unit vector)
+        [-0.333333333333333, 0.942809033637852, 0.0],  # y-axis
+        [-0.333333333333333, -0.471404564484194, 0.816496546528280]   # z-axis
+    ]
+
 time_start = t.time()
 f_url = format_data(url, output_file=os.path.join(base_folder, "formated_data.csv"), shift_map=shift_rules)
 k_pot_url = det_K_pot(min, max, radius, output_file=os.path.join(base_folder, "k_pot_coords.csv"))
-k_suit_url = det_K_suit(f_url, k_pot_url, radius, output_file=os.path.join(base_folder, "k_pot_coords.csv"))
+k_suit_url = det_K_suit(f_url, k_pot_url, radius, base_change=base_change_matrix, output_file=os.path.join(base_folder, "k_pot_coords.csv"))
+# k_suit_url = det_K_suit_proto(f_url, k_pot_url, radius, output_file=os.path.join(base_folder, "k_pot_coords.csv"))
 
 """
-det_k_match_json for calculation, but det_k_match for csv output (easier to look interpret)
+det_k_match_json for calculation, but det_k_match_csv for csv output (easier to look and interpret)
 """
 # k_match_url = det_K_match_csv(f_url, k_suit_url, output_file=os.path.join(base_folder, "neighbouring_k_to_j.csv"))  
 k_match_url = det_K_match_json(f_url, k_suit_url, output_file=os.path.join(base_folder, "neighbouring_k_to_j.json"))  
@@ -44,22 +58,18 @@ time_start = t.time()
 # phys_plot(X_file)
 
 """AFM-Cr - PLOT DATA"""
-Length_scale = 5.32988627
-plot_static_and_spin_decay(
-    static_file=f_url,
-    spin_file=X_file,
-    transform_matrix=[
-        [1.0, 0.0, 0.0],  # x-axis (row vector of x-unit vector)
-        [0.0, 1.0, 0.0],  # y-axis
-        [0.0, 0.0, 1.0]   # z-axis
-    ],
-    scale_diagonal=[Length_scale, Length_scale, Length_scale],  # Example lattice scaling in a₀
-    output_static=os.path.join(base_folder, "static_decay_plot.png"),
-    output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
-    output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
-)
-time_end = t.time()
-print(f"run time {time_end-time_start}") 
+# Length_scale = 5.32988627
+# plot_static_and_spin_decay(
+#     static_file=f_url,
+#     spin_file=X_file,
+#     transform_matrix=base_change_matrix, # type: ignore
+#     scale_diagonal=[Length_scale, Length_scale, Length_scale],  # Example lattice scaling in a₀
+#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
+#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
+#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
+# )
+# time_end = t.time()
+# print(f"run time {time_end-time_start}") 
 
 """Bcc-Fe - PLOT DATA"""
 # Length_scale = 5.42
@@ -81,23 +91,23 @@ print(f"run time {time_end-time_start}")
 # print(f"run time {time_end-time_start}") 
 
 """NM-Cr - PLOT DATA"""
-# Length_scale = 4.640997226251
-# plot_static_and_spin_decay(
-#     static_file=f_url,
-#     spin_file=X_file,
-#     transform_matrix=[
-#         [1.0, 0.0, 0.0],  # x-axis (row vector of x-unit vector)
-#         [-0.333333333333333, 0.942809033637852, 0.0],  # y-axis
-#         [-0.333333333333333, -0.471404564484194, 0.816496546528280]   # z-axis
-#     ],
-#     scale_diagonal=[Length_scale, Length_scale, Length_scale],  # Example lattice scaling in a₀
-#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
-#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
-#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
-# )
+Length_scale = 4.640997226251
+plot_static_and_spin_decay(
+    static_file=f_url,
+    spin_file=X_file,
+    transform_matrix=[
+        [1.0, 0.0, 0.0],  # x-axis (row vector of x-unit vector)
+        [-0.333333333333333, 0.942809033637852, 0.0],  # y-axis
+        [-0.333333333333333, -0.471404564484194, 0.816496546528280]   # z-axis
+    ],
+    scale_diagonal=[Length_scale, Length_scale, Length_scale],  # Example lattice scaling in a₀
+    output_static=os.path.join(base_folder, "static_decay_plot.png"),
+    output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
+    output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
+)
 
-# time_end = t.time()
-# print(f"run time {time_end-time_start}") 
+time_end = t.time()
+print(f"run time {time_end-time_start}") 
 
 """Generallized script run"""
 # compute_Xzz_all_site_dependent(

@@ -1,7 +1,8 @@
-import pandas as pd # Datafram imports
-import ast  # For safely converting string tuples to actual tuples
-import json
-from typing import Optional
+import pandas as pd
+import ast  
+import json 
+from typing import Optional, Tuple
+import numpy as np
 
 # Determine the range in which i and j are to each other 
 # (most likely symmetrical and known rangde)
@@ -27,7 +28,58 @@ def det_K_pot(min:int, max:int, R:int, output_file):
     print(f"Done: The string url is: {output_path} (Result)") # type: ignore
     return output_path
 
+def to_tuple(x):
+    return tuple(float(i) if isinstance(i, np.floating) else int(i) for i in x)
+
+def clean_tuple_str(t: Tuple[float, float, float]) -> str:
+    """Formats tuple as a string, removing .0 when the value is an integer."""
+    return "(" + ", ".join(
+        str(int(x)) if x == int(x) else str(x)
+        for x in t
+    ) + ")"
+
 def det_K_suit(f_url: str,
+               k_url: str,
+               R: int,
+               base_change: list,
+               output_file: str) -> str:
+    import numpy as np
+    import pandas as pd
+
+    df_j = pd.read_csv(f_url, sep=";", index_col=False)
+    df_k = pd.read_csv(k_url, sep=";", index_col=False)
+
+    j_coords = list(zip(df_j["dx"], df_j["dy"], df_j["dz"]))
+    k_coords = list(zip(df_k["k_dx"], df_k["k_dy"], df_k["k_dz"]))
+    T = np.array(base_change)
+
+    matched_j = []
+    matched_k = []
+
+    for j in j_coords:
+        j_vec = np.array(j, dtype=float)
+        for k in k_coords:
+            k_vec = np.array(k, dtype=float)
+            rel_vec = k_vec - j_vec
+            rel_transformed = rel_vec @ T
+            dist2 = np.dot(rel_transformed, rel_transformed)
+
+            if 0 < dist2 <= R**2:
+                matched_j.append(to_tuple(j_vec))   # Convert to clean Python tuple
+                matched_k.append(to_tuple(k_vec))   # Convert to clean Python tuple
+
+    df_out = pd.DataFrame({
+        "j-coordinate": [clean_tuple_str(j) for j in matched_j],
+        "k-coordinate": [clean_tuple_str(k) for k in matched_k]
+    })
+
+    df_out.to_csv(output_file, sep=";", index=False)
+    print(f"Done: The string url is: {output_file} (Clean tuple output)")
+    return output_file
+
+
+# === Step 2: Determine suitable K-sites near each j ===
+def det_K_suit_proto(f_url: str,
                k_url: str,
                R: int,
                output_file: str) -> str:
@@ -67,58 +119,6 @@ def det_K_suit(f_url: str,
     df_out.to_csv(output_file, sep=";", index=False)
     print(f"Done: The string url is: {output_file} (Result)")
     return output_file
-
-# === Step 2: Determine suitable K-sites near each j ===
-# def det_K_suit(f_url: str,
-#                k_url: str,
-#                R: int,
-#                output_file: str,
-#                shift_map: Optional[dict] = None) -> str:
-#     """
-#     Determine suitable k-sites for each j-site with optional site-dependent sublattice shifts.
-
-#     Args:
-#         f_url: Path to formatted input CSV with i, j, dx, dy, dz.
-#         k_url: Path to CSV containing potential k-site displacements (k_dx, k_dy, k_dz).
-#         R: Cutoff radius.
-#         output_file: Path to save resulting j-k mapping.
-#         shift_map: Optional dictionary {(i_site, j_site): (dx_shift, dy_shift, dz_shift)}.
-#                    Defaults to 0 shift if not provided.
-
-#     Returns:
-#         Path to output CSV with columns ['j-coordinate', 'k-coordinate'].
-#     """
-#     # Ensure fallback shift_map
-#     if shift_map is None:
-#         shift_map = {}
-
-#     df_j = pd.read_csv(f_url, sep=";", index_col=False)
-#     df_k = pd.read_csv(k_url, sep=";", index_col=False)
-
-#     j_tuples = list(zip(df_j["i"], df_j["j"], df_j["dx"], df_j["dy"], df_j["dz"]))
-#     k_tuples = list(zip(df_k["k_dx"], df_k["k_dy"], df_k["k_dz"]))
-
-#     j_coords = []
-#     k_coords = []
-
-#     for (i_site, j_site, j_dx, j_dy, j_dz) in j_tuples:
-#         shift = shift_map.get((i_site, j_site), (0.0, 0.0, 0.0))
-
-#         for (k_dx, k_dy, k_dz) in k_tuples:
-#             kx_s, ky_s, kz_s = k_dx + shift[0], k_dy + shift[1], k_dz + shift[2]
-#             dist2 = (j_dx - kx_s)**2 + (j_dy - ky_s)**2 + (j_dz - kz_s)**2
-#             if 0 < dist2 <= R**2:
-#                 j_coords.append((j_dx, j_dy, j_dz))
-#                 k_coords.append((k_dx, k_dy, k_dz))
-
-#     df = pd.DataFrame({
-#         "j-coordinate": [str(j) for j in j_coords],
-#         "k-coordinate": [str(k) for k in k_coords]
-#     })
-#     df.to_csv(output_file, sep=";", index=False)
-#     print(f"Done: The string url is: {output_file} (Has been rewritten)")
-#     return output_file
-
 
 # === Step 3: Group suitable K by J (match step) ===
 def det_K_match_json(f_url: str, k_url: str, output_file: str) -> str:
