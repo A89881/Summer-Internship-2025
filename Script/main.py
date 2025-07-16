@@ -13,9 +13,9 @@ import os
 # === MATERIAL INPUT SETUP ===
 # Choose dataset by changing the `url` path to point to desired material input
 
+# url = r"Bcc-Fe\chfile-1.dat"         # Ferromagnetic Bcc Iron
 # url = r"AFM-Cr\AFM-chfile.dat"       # Antiferromagnetic Chromium (2 sublattices)
-url = r"Bcc-Fe\chfile-1.dat"         # Ferromagnetic Bcc Iron
-# url = r"NM-Cr\NM-chfile-1.dat"         # Nonmagnetic Chromium
+url = r"NM-Cr\NM-chfile-1.dat"         # Nonmagnetic Chromium
 
 base_folder = os.path.dirname(url)
 
@@ -63,7 +63,7 @@ f_url = format_data(
 k_pot_url = det_K_pot(min, max, radius, output_file=os.path.join(base_folder, "k_pot_coords.csv"))
 
 # === STEP 3: Find K-sites Valid for Each J-site Using Shifted Coordinates + Lattice Transform ===
-k_suit_url = det_K_suit(f_url, k_pot_url, radius, base_change=base_change_matrix_Bcc, output_file=os.path.join(base_folder, "k_pot_coords.csv")
+k_suit_url = det_K_suit(f_url, k_pot_url, radius, base_change=base_change_matrix_NM, output_file=os.path.join(base_folder, "k_pot_coords.csv")
 )
 
 # === STEP 4: Group K by J into JSON (for input to Dyson solver) or CSV (debug view) ===
@@ -103,30 +103,31 @@ print(f"Data preparation and χ^zz computation done. Runtime: {time_end - time_s
 #     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
 # )
 
-# Bcc-Fe Setup
-Length_scale = 5.42
-plot_static_and_spin_decay(
-    static_file=f_url,
-    spin_file=X_file,
-    transform_matrix= base_change_matrix_Bcc,
-    scale_diagonal=[Length_scale] * 3,
-    output_static=os.path.join(base_folder, "static_decay_plot.png"),
-    output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
-    output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
-)
-
-# # NM-Cr Setup (enabled by default)
-# Length_scale = 4.640997226251
+# # Bcc-Fe Setup
+# Length_scale = 5.42
 # plot_static_and_spin_decay(
 #     static_file=f_url,
 #     spin_file=X_file,
-#     transform_matrix=base_change_matrix_NM,
+#     transform_matrix= base_change_matrix_Bcc,
 #     scale_diagonal=[Length_scale] * 3,
 #     output_static=os.path.join(base_folder, "static_decay_plot.png"),
 #     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
 #     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
 # )
 
+# NM-Cr Setup (enabled by default)
+Length_scale = 4.640997226251
+plot_static_and_spin_decay(
+    static_file=f_url,
+    spin_file=X_file,
+    transform_matrix=base_change_matrix_NM,
+    scale_diagonal=[Length_scale] * 3,
+    output_static=os.path.join(base_folder, "static_decay_plot.png"),
+    output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
+    output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
+)
+
+phys_plot(X_file)
 time_end = t.time()
 print(f"Plotting finished. Runtime: {time_end - time_start:.2f} s")
 
