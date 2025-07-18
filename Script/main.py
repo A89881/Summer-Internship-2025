@@ -4,7 +4,6 @@
 
 from format import *
 from determine_k_site import *
-from solving_equation import *
 from solving_equation_mult import *
 from thr_d_plot import *
 from decay_plot import *
@@ -84,16 +83,7 @@ k_suit_url = det_K_suit(
 # k_match_url = det_K_match_csv(...)   # Easier to understand data format (Recommended for debugging)
 k_match_url = det_K_match_json(f_url, k_suit_url, output_file=os.path.join(base_folder, "neighbouring_k_to_j.json"))
 
-# === STEP 5: Define Kernel Parameters and Solve for χ^zz (for single U - KERNEL systems) ===
-# U_kernel = (2.0, 2.0, 0.0, 0.0)  # U↑↑, U↓↓, U↑↓, U↓↑
-# X_file = compute_Xzz_all(
-#     f_url,
-#     k_match_url,
-#     U_kernel,
-#     output_file=os.path.join(base_folder, "xzz_output_iter.csv"),
-#     temp_txt=os.path.join(base_folder, "debug_iter.txt")
-# )
-
+# === STEP 5: Define Kernel Parameters and Solve for χ^zz ===
 # === ADVANCED: Example for future site-dependent U implementations (Multi-U KERNEL systems) ===
 X_file = compute_Xzz_all_site_dependent(
     xij_file=f_url,
@@ -101,7 +91,7 @@ X_file = compute_Xzz_all_site_dependent(
     site_map_file=f_url,
     U_params=[
         (2.0, 2.0, 0.0, 0.0),  # U matrix for site type 1  # U↑↑, U↓↓, U↑↓, U↓↑
-        (3.0, 3.0, 0.0, 0.0),  # U matrix for site type 2  # U↑↑, U↓↓, U↑↓, U↓↑
+        # (2.5, 2.5, 0.0, 0.0),  # U matrix for site type 2  # U↑↑, U↓↓, U↑↓, U↓↑
     ],
     output_file=os.path.join(base_folder, "xzz_output_iter.csv"),
     temp_txt=os.path.join(base_folder, "debug_iter.txt")
@@ -117,17 +107,17 @@ print(f"Data preparation and χ^zz computation done. Runtime: {time_end - time_s
 # === Optional: Enable Visualisation for Decay and Comparison Plots ===
 # === === === === === === === === === === === === === === === === ===
 
-# # AFM-Cr Setup
-# Length_scale = 5.32988627
-# plot_static_and_spin_decay(
-#     static_file=f_url,
-#     spin_file=X_file,
-#     transform_matrix=base_change_matrix_AFM,
-#     scale_diagonal=[Length_scale] * 3,
-#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
-#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
-#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
-# )
+# AFM-Cr Setup
+Length_scale = 5.32988627
+plot_static_and_spin_decay(
+    static_file=f_url,
+    spin_file=X_file,
+    transform_matrix=base_change_matrix_AFM,
+    scale_diagonal=[Length_scale] * 3,
+    output_static=os.path.join(base_folder, "static_decay_plot.png"),
+    output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
+    output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
+)
 
 # # Bcc-Fe Setup
 # Length_scale = 5.42
@@ -154,7 +144,7 @@ print(f"Data preparation and χ^zz computation done. Runtime: {time_end - time_s
 # )
 
 # === OPTIONAL 3D - Plot ===
-# phys_plot(X_file)
+phys_plot(X_file)
 time_end = t.time()
 print(f"Plotting finished. Runtime: {time_end - time_start:.2f} s")
 
