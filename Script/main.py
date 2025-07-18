@@ -5,6 +5,7 @@
 from format import *
 from determine_k_site import *
 from solving_equation import *
+from solving_equation_mult import *
 from thr_d_plot import *
 from decay_plot import *
 import time as t
@@ -15,7 +16,8 @@ import os
 
 # url = r"Bcc-Fe\chfile-1.dat"         # Ferromagnetic Bcc Iron
 # url = r"AFM-Cr\AFM-chfile.dat"       # Antiferromagnetic Chromium (2 sublattices)
-url = r"NM-Cr\NM-chfile-1.dat"         # Nonmagnetic Chromium
+# url = r"NM-Cr\NM-chfile-1.dat"       # Nonmagnetic Chromium
+url = r"Multi_AFM-Cr\AFM-chfile.dat" # Multisite dependant Ferromagnetic Bcc Iron (Testing only)
 
 base_folder = os.path.dirname(url)
 
@@ -24,17 +26,18 @@ radius = 5  # Cutoff radius for valid k-site neighbors
 min = -10   # Grid range minimum
 max = 10    # Grid range maximum
 
-# === SITE SHIFT RULES FOR SUBLATTICES (used only for AFM materials) ===
+# === SITE SHIFT RULES FOR SUBLATTICES ===
 # For AFM-Cr, sublattices are at (0,0,0) and (0.5,0.5,0.5) → shift between site types
+# Defaults to, zero-shift if empty dict, or if site shift not given
+# Input format: (i, j): (dx, dy, dz) shifting vector
 shift_rules = {
-    # (1, 2): (-0.5, -0.5, -0.5),
-    # (2, 1): (0.5, 0.5, 0.5),
-    # (1, 1): (0.0, 0.0, 0.0),
-    # (2, 2): (0.0, 0.0, 0.0)
+    (1, 2): (-0.5, -0.5, -0.5),
+    (2, 1): (0.5, 0.5, 0.5),
+    (1, 1): (0.0, 0.0, 0.0),
+    (2, 2): (0.0, 0.0, 0.0)
 }
 
-# === TRANSFORMATION MATRIX (depends on lattice symmetry) ===
-# Identity for simple cubic, rotated basis for BCC/FCC/HCP
+# === TRANSFORMATION MATRIX (depends on lattice symmetry and geometry) ===
 base_change_matrix_NM = [
     [1.0, 0.0, 0.0],
     [-0.333333333333333, 0.942809033637852, 0.0],
@@ -54,29 +57,52 @@ base_change_matrix_Bcc = [
 # === STEP 1: Data Formatting with Optional Sublattice Shifting ===
 time_start = t.time()
 f_url = format_data(
-    url,
+    url, 
     output_file=os.path.join(base_folder, "formated_data.csv"),
     shift_map=shift_rules
 )
 
 # === STEP 2: Determine Valid K-sites in Radius ===
-k_pot_url = det_K_pot(min, max, radius, output_file=os.path.join(base_folder, "k_pot_coords.csv"))
+k_pot_url = det_K_pot(
+    min, 
+    max, 
+    radius, 
+    output_file=os.path.join(base_folder, "k_pot_coords.csv")
+)
 
 # === STEP 3: Find K-sites Valid for Each J-site Using Shifted Coordinates + Lattice Transform ===
-k_suit_url = det_K_suit(f_url, k_pot_url, radius, base_change=base_change_matrix_NM, output_file=os.path.join(base_folder, "k_pot_coords.csv")
+k_suit_url = det_K_suit(
+    f_url, 
+    k_pot_url, 
+    radius, 
+    base_change_matrix_AFM, 
+    output_file=os.path.join(base_folder, "k_pot_coords.csv")
 )
 
 # === STEP 4: Group K by J into JSON (for input to Dyson solver) or CSV (debug view) ===
-# Use one of these depending on what your solver expects:
-# k_match_url = det_K_match_csv(...)   # If working in CSV pipeline
+# Use one (recommended JSON for Reliability) of these depending on what your solver expects:
+# k_match_url = det_K_match_csv(...)   # Easier to understand data format (Recommended for debugging)
 k_match_url = det_K_match_json(f_url, k_suit_url, output_file=os.path.join(base_folder, "neighbouring_k_to_j.json"))
 
-# === STEP 5: Define Kernel Parameters and Solve for χ^zz ===
-U_kernel = (2.0, 2.0, 0.0, 0.0)  # U↑↑, U↓↓, U↑↓, U↓↑
-X_file = compute_Xzz_all(
-    f_url,
-    k_match_url,
-    U_kernel,
+# === STEP 5: Define Kernel Parameters and Solve for χ^zz (for single U - KERNEL systems) ===
+# U_kernel = (2.0, 2.0, 0.0, 0.0)  # U↑↑, U↓↓, U↑↓, U↓↑
+# X_file = compute_Xzz_all(
+#     f_url,
+#     k_match_url,
+#     U_kernel,
+#     output_file=os.path.join(base_folder, "xzz_output_iter.csv"),
+#     temp_txt=os.path.join(base_folder, "debug_iter.txt")
+# )
+
+# === ADVANCED: Example for future site-dependent U implementations (Multi-U KERNEL systems) ===
+X_file = compute_Xzz_all_site_dependent(
+    xij_file=f_url,
+    kfile=k_match_url,
+    site_map_file=f_url,
+    U_params=[
+        (2.0, 2.0, 0.0, 0.0),  # U matrix for site type 1  # U↑↑, U↓↓, U↑↓, U↓↑
+        (3.0, 3.0, 0.0, 0.0),  # U matrix for site type 2  # U↑↑, U↓↓, U↑↓, U↓↑
+    ],
     output_file=os.path.join(base_folder, "xzz_output_iter.csv"),
     temp_txt=os.path.join(base_folder, "debug_iter.txt")
 )
@@ -116,29 +142,20 @@ print(f"Data preparation and χ^zz computation done. Runtime: {time_end - time_s
 # )
 
 # NM-Cr Setup (enabled by default)
-Length_scale = 4.640997226251
-plot_static_and_spin_decay(
-    static_file=f_url,
-    spin_file=X_file,
-    transform_matrix=base_change_matrix_NM,
-    scale_diagonal=[Length_scale] * 3,
-    output_static=os.path.join(base_folder, "static_decay_plot.png"),
-    output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
-    output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
-)
+# Length_scale = 4.640997226251
+# plot_static_and_spin_decay(
+#     static_file=f_url,
+#     spin_file=X_file,
+#     transform_matrix=base_change_matrix_NM,
+#     scale_diagonal=[Length_scale] * 3,
+#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
+#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
+#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
+# )
 
-phys_plot(X_file)
+# === OPTIONAL 3D - Plot ===
+# phys_plot(X_file)
 time_end = t.time()
 print(f"Plotting finished. Runtime: {time_end - time_start:.2f} s")
 
-# === ADVANCED: Example for future site-dependent U implementations ===
-# compute_Xzz_all_site_dependent(
-#     xij_file='data/formated_data.csv',
-#     kfile='data/k_match.csv',
-#     U_params=[
-#         (2.0, 2.0, 0.0, 0.0),  # Site type 1
-#         (1.5, 1.5, 0.0, 0.0)   # Site type 2
-#     ],
-#     output_file='data/xzz_output.csv',
-#     temp_txt='data/debug_log.txt'
-# )
+

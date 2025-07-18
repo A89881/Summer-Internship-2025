@@ -3,6 +3,7 @@ import csv
 from typing import Optional, Tuple, Dict
 import chardet
 
+# Script to detect encoding regarding the inputed data file
 def detect_encoding(file_path: str, num_bytes: int = 1024) -> str:
     with open(file_path, 'rb') as f:
         raw = f.read(num_bytes)
@@ -14,13 +15,11 @@ def format_data(url: str,
                 scale_response: float = -1.0) -> str:
     """
     Load, clean, shift, and optionally scale response data.
-
     Args:
         url: Path to raw input data (whitespace-separated).
         output_file: Destination CSV path.
         shift_map: Optional site-wise coordinate shift {(i,j): (dx,dy,dz)}.
         scale_response: Multiplier for χ⁰↑ and χ⁰↓ (e.g. -1 to invert signs).
-
     Returns:
         Path to the saved formatted CSV.
     """
