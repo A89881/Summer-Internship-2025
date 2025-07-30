@@ -12,11 +12,17 @@ import os
 
 # === MATERIAL INPUT SETUP ===
 # Choose dataset by changing the `url` path to point to desired material input
+# Crucial to have this format as the header: 
+# (Please copy and paste it into the top and align it correctly)
+# i    j    dx   dy   dz   Jij         χ⁰↑             χ⁰↓
 
 # url = r"Bcc-Fe\chfile-1.dat"         # Ferromagnetic Bcc Iron
 # url = r"AFM-Cr\AFM-chfile.dat"       # Antiferromagnetic Chromium (2 sublattices)
 # url = r"NM-Cr\NM-chfile-1.dat"       # Nonmagnetic Chromium
-url = r"Multi_AFM-Cr\AFM-chfile.dat" # Multisite dependant Ferromagnetic Bcc Iron (Testing only)
+# url = r"Multi_AFM-Cr\AFM-chfile.dat" # Multisite dependant Ferromagnetic Bcc Iron (Testing only)
+# url = r"NA-BCC-NM\chfile-1.dat"      # Nonmagnetic BCC Sodium
+# url = r"Cu-FCC\chfile-1.dat"         # FCC Copper
+url = r"TaSe\chfile-TaSe.dat"         
 
 base_folder = os.path.dirname(url)
 
@@ -28,12 +34,20 @@ max = 10    # Grid range maximum
 # === SITE SHIFT RULES FOR SUBLATTICES ===
 # For AFM-Cr, sublattices are at (0,0,0) and (0.5,0.5,0.5) → shift between site types
 # Defaults to, zero-shift if empty dict, or if site shift not given
-# Input format: (i, j): (dx, dy, dz) shifting vector
-shift_rules = {
+# Input format: (i, j): (dx, dy, dz) shifting vector'
+
+shift_rules_null = {
+
+}
+
+shift_rules_AFM = {
     (1, 2): (-0.5, -0.5, -0.5),
     (2, 1): (0.5, 0.5, 0.5),
-    (1, 1): (0.0, 0.0, 0.0),
-    (2, 2): (0.0, 0.0, 0.0)
+}
+
+shift_rules_TaSe = {
+    (1, 2): (0.0, 0.0, 0.5),
+    (2, 1): (0.0, 0.0, -0.5)
 }
 
 # === TRANSFORMATION MATRIX (depends on lattice symmetry and geometry) ===
@@ -52,13 +66,24 @@ base_change_matrix_Bcc = [
     [0.5, -0.5, 0.5],
     [0.5, 0.5, -0.5]
 ]
+base_change_matrix_FCC = [
+    [-0.5, 0.0, 0.5],
+    [0.0, 0.5, 0.5],
+    [-0.5, 0.5, 0.0]
+]
+
+base_change_matrix_TaSe = [
+    [0.866025403784439, -0.5, 0.0],
+    [0.0, 1.0, 0.0],
+    [0.0, 0.0, 3.85960152170524]
+]
 
 # === STEP 1: Data Formatting with Optional Sublattice Shifting ===
 time_start = t.time()
 f_url = format_data(
     url, 
     output_file=os.path.join(base_folder, "formated_data.csv"),
-    shift_map=shift_rules
+    shift_map=shift_rules_TaSe
 )
 
 # === STEP 2: Determine Valid K-sites in Radius ===
@@ -74,7 +99,7 @@ k_suit_url = det_K_suit(
     f_url, 
     k_pot_url, 
     radius, 
-    base_change_matrix_AFM, 
+    base_change_matrix_TaSe, 
     output_file=os.path.join(base_folder, "k_pot_coords.csv")
 )
 
@@ -107,20 +132,21 @@ print(f"Data preparation and χ^zz computation done. Runtime: {time_end - time_s
 # === Optional: Enable Visualisation for Decay and Comparison Plots ===
 # === === === === === === === === === === === === === === === === ===
 
-# AFM-Cr Setup
-Length_scale = 5.32988627
-plot_static_and_spin_decay(
-    static_file=f_url,
-    spin_file=X_file,
-    transform_matrix=base_change_matrix_AFM,
-    scale_diagonal=[Length_scale] * 3,
-    output_static=os.path.join(base_folder, "static_decay_plot.png"),
-    output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
-    output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
-)
+# # AFM-Cr Setup (enabled by default)
+# Length_scale = 5.32988627
+# plot_static_and_spin_decay(
+#     static_file=f_url,
+#     spin_file=X_file,
+#     transform_matrix=base_change_matrix_AFM,
+#     scale_diagonal=[Length_scale] * 3,
+#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
+#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
+#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
+# )
 
-# # Bcc-Fe Setup
-# Length_scale = 5.42
+# Bcc-Fe Setup (enabled by default)
+# Length_scale = 5.42 # Bcc - Fe Length scaling
+# Length_scale = 7.98 # NA - BCC Length scaling
 # plot_static_and_spin_decay(
 #     static_file=f_url,
 #     spin_file=X_file,
@@ -142,6 +168,30 @@ plot_static_and_spin_decay(
 #     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
 #     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
 # )
+
+# Cu-FCC Setup (enabled by default)
+# Length_scale = 6.760364108039488
+# plot_static_and_spin_decay(
+#     static_file=f_url,
+#     spin_file=X_file,
+#     transform_matrix= base_change_matrix_FCC,
+#     scale_diagonal=[Length_scale] * 3,
+#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
+#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
+#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
+# )
+
+# TaSe2 Setup (enabled by default)
+Length_scale = 6.760364108039488
+plot_static_and_spin_decay(
+    static_file=f_url,
+    spin_file=X_file,
+    transform_matrix= base_change_matrix_TaSe,
+    scale_diagonal=[Length_scale] * 3,
+    output_static=os.path.join(base_folder, "static_decay_plot.png"),
+    output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
+    output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
+)
 
 # === OPTIONAL 3D - Plot ===
 phys_plot(X_file)
