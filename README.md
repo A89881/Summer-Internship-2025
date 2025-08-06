@@ -1,19 +1,26 @@
-# χ<sup>zz</sup> - Longitudinal Susceptibility Solver for Real-Space Dyson Equation
+# χ<sup>zz</sup> — Longitudinal Susceptibility Solver for Real-Space Dyson Equation
 
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This repository provides a Python implementation for computing the **longitudinal spin susceptibility** \( \chi^{zz} \) in real space using a Dyson-like self-consistent framework. The solver is designed to support multi-site systems such as BCC Chromium or Iron, with site- and spin-dependent exchange kernels.
+This repository implements a general-purpose Python framework to compute the **longitudinal spin susceptibility** $\( \chi^{zz} \)$ in real space. The solver uses a Dyson-like equation to compute the response per site based on bare static susceptibilities. It is designed to be general for **any crystal system**, given that appropriate lattice transformations, sublattice shifts, and interaction parameters are defined.
+
+---
 
 ## Overview
 
-The code performs the following steps:
+The pipeline consists of the following steps:
 
-1. Parses raw input files (`.dat`) containing bare response values \( \chi^{0}_{\uparrow}, \chi^{0}_{\downarrow} \).
-2. Constructs valid \( j \rightarrow k \) neighborhoods based on spatial geometry.
-3. Solves the Dyson equation per site to compute the longitudinal response \( \chi^{zz}_j \).
-4. Generates optional visualizations, including decay plots and 3D Fourier projections.
-5. Validates symmetry by comparing \(\vec{r}\) vs \(-\vec{r}\) response.
+1. Format raw RSPt-style input files (bare response data).
+2. Generate candidate and valid k-sites for each j-site.
+3. Map j-sites to valid k-sites based on distance and lattice transform.
+4. Solve a Dyson-like system for $\( \chi^{zz} \)$ site-by-site.
+5. Optionally visualize results and verify symmetry.
+
+The script supports systems with:
+- Arbitrary Bravais lattices
+- Multiple sublattices and site-dependent shifting
+- Multi-site interaction kernels $\( U_{↑↑}, U_{↓↓}, U_{↑↓}, U_{↓↑} \)$
 
 ---
 
@@ -21,108 +28,182 @@ The code performs the following steps:
 
 ```text
 root/
-├── input-file.dat                  # Required: raw χ⁰ data (with dx, dy, dz, χ⁰↑, χ⁰↓)
+├── main.py                     # Main execution and configuration script
 │
-├── format.py                      # Step 1: formats input into CSV
-├── determine_k_site.py           # Step 2: finds all valid k-sites within cutoff
-├── solving_equation_mult.py      # Step 3: solves Dyson-like equations for χᶻᶻ
-├── decay_plot.py                 # Step 4: generates static vs dynamic decay plots
-├── thr_d_plot.py                 # Step 5: optional 3D or Fourier-space visualization
-├── main.py                       # Driver script, configure and run everything
+├── format.py                   # Step 1: format input file to CSV
+├── determine_k_site.py         # Step 2: find valid k-sites per j
+├── solving_equation_mult.py    # Step 3: Dyson equation solver for χᶻᶻ
+├── decay_plot.py               # Step 4: decay plots
+├── thr_d_plot.py               # Step 5: optional 3D/FT visualization
 │
-├── formated_data.csv             # Output: formatted χ⁰ data with shifts
-├── k_pot_coords.csv              # Output: full list of k-vectors in cutoff radius
-├── neighbouring_k_to_j.json      # Output: final k-mapping for Dyson solver
-├── xzz_output_iter.csv           # Output: solved χᶻᶻ per j-site
-├── formated_output.dat           # Output: merged χ⁰ and χᶻᶻ per site
-├── debug_iter.txt                # Optional: iteration log
+├── input-file.dat              # Raw RSPt output (user-provided)
 │
-├── xzz_decay_plot.png            # Plot: χᶻᶻ spatial decay
-├── static_decay_plot.png         # Plot: χ⁰ static decay
-├── comparison_decay_plot.png     # Plot: overlay of χ⁰ vs χᶻᶻ decay
+├── formated_data.csv           # Output: parsed χ⁰ data
+├── k_pot_coords.csv            # Output: candidate k-sites
+├── neighbouring_k_to_j.json    # Output: final k → j mapping
+├── xzz_output_iter.csv         # Output: solved χᶻᶻ per j-site
+├── formated_output.dat         # Output: combined χ⁰ and χᶻᶻ
+├── debug_iter.txt              # Optional debug log
+│
+├── static_decay_plot.png       # Plot: χ⁰ decay
+├── xzz_decay_plot.png          # Plot: χᶻᶻ decay
+├── comparison_decay_plot.png   # Overlay plot: χ⁰ vs χᶻᶻ
 ````
 
 ---
 
 ## Input Format
 
-The main input file (`input-file.dat`) must follow the structure:
+The main input file (`input-file.dat`) must be **space-separated** and include this header:
 
 ```
-# i    j    dx    dy    dz    Jij        χ⁰↑           χ⁰↓
+i    j    dx    dy    dz    Jij        χ⁰↑           χ⁰↓
 ```
 
-Each line corresponds to a pair of sites with:
+Where:
 
-* `i, j`: site indices (ignored in solver, used for sublattice logic)
-* `dx, dy, dz`: integer lattice displacements between sites
-* `χ⁰↑`, `χ⁰↓`: diagonal static response values (spin-up and spin-down)
+* `i, j`: site indices (used for applying sublattice shift rules)
+* `dx, dy, dz`: integer displacements from site `j` to `i`
+* `χ⁰↑`, `χ⁰↓`: bare static spin susceptibility components
+* `Jij`: optional and unused in the solver
+
+Example line:
+
+```
+1  1  0  0  1  0.0000  0.01234  0.01234
+```
 
 ---
 
-## Recommended Inputs
+## Customizing for Your System
 
-* Ensure uniform and symmetric sampling over spatial shells
-* Lattice positions should follow integer-based Cartesian grid units
-* Sub-sublattice shifts (e.g. for AFM systems) must be handled via `shift_rules` in `main.py`
+The solver is fully general, allowing you to provide custom physical parameters for your system in `main.py`.
+
+### 1. Choose or define your material dataset
+
+```python
+url = r"YourFolder/your-input.dat"
+```
+
+### 2. Provide a lattice transformation matrix
+
+For example, for a cubic system:
+
+```python
+base_change_matrix = [
+    [1.0, 0.0, 0.0],  e_x
+    [0.0, 1.0, 0.0],  e_y
+    [0.0, 0.0, 1.0],  e_z
+]
+```
+
+Or define your own matrix that maps from integer basis vectors to Cartesian coordinates.
+
+### 3. Define sublattice shift rules (if applicable)
+
+```python
+shift_rules = {
+    (1, 2): (-0.5, -0.5, -0.5),
+    (2, 1): (0.5, 0.5, 0.5)
+}
+```
+
+Leave empty if the system has no sublattice logic:
+
+```python
+shift_rules = {}
+```
+
+### 4. Set your U-kernel parameters
+
+Example (uniform across all sites):
+
+```python
+U_params = [(2.0, 2.0, 0.0, 0.0)]
+```
+
+Or define one per site type (multi-site kernel support):
+
+```python
+U_params = [
+    (2.0, 2.0, 0.0, 0.0),  # Site type 1
+    (2.5, 2.5, 0.0, 0.0),  # Site type 2
+]
+```
+
+---
+
+## Running the Solver
+
+1. Configure `main.py` with:
+
+   * Path to input file (`url`)
+   * Lattice transformation matrix
+   * Sublattice shift rules
+   * Kernel parameters
+
+2. Run:
+
+```bash
+python main.py
+```
+
+This will:
+
+* Format the data
+* Compute neighborhoods
+* Solve for χᶻᶻ
+* Optionally generate plots
+
+---
+
+## Output Files
+
+| File                        | Purpose                              |
+| --------------------------- | ------------------------------------ |
+| `formated_data.csv`         | Parsed and shifted input             |
+| `k_pot_coords.csv`          | All spatial candidates for k-sites   |
+| `neighbouring_k_to_j.json`  | Mapping of j-sites to valid k-sites  |
+| `xzz_output_iter.csv`       | Resulting χᶻᶻ values for all j-sites |
+| `formated_output.dat`       | Combined input and output            |
+| `debug_iter.txt`            | Optional log                         |
+| `xzz_decay_plot.png`        | Decay of χᶻᶻ                         |
+| `static_decay_plot.png`     | Decay of χ⁰                          |
+| `comparison_decay_plot.png` | Overlay: χ⁰ vs χᶻᶻ                   |
 
 ---
 
 ## Dependencies
 
-Install required packages with:
+Use `pip` to install required packages:
 
 ```bash
-pip install numpy pandas matplotlib tqdm
+pip install -r requirements.txt
+```
+
+**requirements.txt:**
+
+```
+numpy
+pandas
+matplotlib
+tqdm
+chardet
 ```
 
 Tested with Python 3.8+
 
 ---
 
-## Running the Solver
-
-1. Edit `main.py` and set the correct input path:
-
-```python
-url = r"AFM-Cr\AFM-chfile.dat"  # or your own file
-```
-
-2. Choose the correct:
-
-   * `base_change_matrix_*` depending on your crystal symmetry
-   * `shift_rules_*` for sublattice configurations (e.g., AFM)
-
-3. Run the solver:
-
-```bash
-python main.py
-```
-
-The script will:
-
-* Format the input
-* Determine k-site neighborhoods
-* Solve for longitudinal χᶻᶻ
-* Produce visualizations
-
----
-
-## Visualization Options
-
-Enable or disable plotting in `main.py` by modifying the relevant block near the end of the script. The plotting scripts support real-space decay and 3D projections.
-
----
-
 ## Notes
 
-* Only real-valued, diagonal χ⁰ values are currently supported.
-* The mapping and solver can handle different site types (multi-site logic).
-* For Fourier-space comparisons, ensure proper normalization and consistent grid definitions.
+* Supports general materials and lattice symmetries
+* Accepts arbitrary sublattice shifting and kernel structure
+* Input must be symmetric and consistent for physical accuracy
+* Output visualizations help verify decay and symmetry
 
 ---
 
 ## License
 
-Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
-
+MIT License. See [LICENSE](LICENSE) for terms.
