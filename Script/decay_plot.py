@@ -32,7 +32,7 @@ def plot_static_and_spin_decay(
     # === Load and process static bare susceptibility ===
     static_df = pd.read_csv(static_file, sep=';')
     static_df['coord'] = static_df.apply(lambda row: (row['dx'], row['dy'], row['dz']), axis=1)
-    static_df['chi0'] = 0.5 * (static_df['χ⁰↑'] + static_df['χ⁰↓'])  # Average of up/down components
+    static_df['chi0'] = 0.25 * (static_df['χ⁰↑'] + static_df['χ⁰↓'])  # Average of up/down components
 
     coords_static = np.array(static_df['coord'].tolist())  # Shape (N, 3)
     chi0_vals = static_df['chi0'].values
@@ -54,13 +54,18 @@ def plot_static_and_spin_decay(
     dists_static = np.linalg.norm(coords_static_transformed, axis=1)
     dists_spin = np.linalg.norm(coords_spin_transformed, axis=1)
 
+    # === Apply rounding consistently ===
+    round_decimals = 8
+    dists_static = np.round(dists_static, decimals=round_decimals)
+    dists_spin = np.round(dists_spin, decimals=round_decimals)
+
     # === Plot 1: χ⁰ (static) decay plot ===
     sort_idx_static = np.argsort(dists_static)
 
     plt.figure()
     plt.plot(
         dists_static[sort_idx_static],
-        chi0_vals[sort_idx_static], # type: ignore
+        chi0_vals[sort_idx_static],  # type: ignore
         'o-', color='blue', linewidth=1, markersize=2
     )
     plt.title("χ⁰ vs. Transformed Distance")
@@ -78,7 +83,7 @@ def plot_static_and_spin_decay(
     plt.figure()
     plt.plot(
         dists_spin[sort_idx_spin],
-        xzz_vals[sort_idx_spin], # type: ignore
+        xzz_vals[sort_idx_spin],  # type: ignore
         'o-', color='darkgreen', linewidth=1, markersize=2
     )
     plt.title("χᶻᶻ vs. Transformed Distance")
@@ -94,12 +99,12 @@ def plot_static_and_spin_decay(
     plt.figure()
     plt.plot(
         dists_static[sort_idx_static],
-        chi0_vals[sort_idx_static], # type: ignore
+        chi0_vals[sort_idx_static],  # type: ignore
         'o-', label='χ⁰ (static avg)', color='blue', linewidth=1, markersize=2
     )
     plt.plot(
         dists_spin[sort_idx_spin],
-        xzz_vals[sort_idx_spin], # type: ignore
+        xzz_vals[sort_idx_spin],  # type: ignore
         'o-', label='χᶻᶻ (spin response)', color='darkred', linewidth=1, markersize=2
     )
     plt.title("Comparison of χ⁰ and χᶻᶻ vs. Transformed Distance")
