@@ -34,7 +34,7 @@ root/
 ├── determine_k_site.py         # Step 2: find valid k-sites per j
 ├── solving_equation_mult.py    # Step 3: Dyson equation solver for χᶻᶻ
 ├── decay_plot.py               # Step 4: decay plots
-├── thr_d_plot.py               # Step 5: optional 3D visualization
+├── thr_d_plot.py               # Step 5: optional 3D/FT visualization
 │
 ├── input-file.dat              # Raw RSPt output (user-provided)
 │
