@@ -18,11 +18,13 @@ import os
 
 # url = r"Bcc-Fe\chfile-1.dat"         # Ferromagnetic Bcc Iron
 # url = r"AFM-Cr\AFM-chfile.dat"       # Antiferromagnetic Chromium (2 sublattices)
-url = r"NM-Cr\NM-chfile-1.dat"       # Nonmagnetic Chromium
+# url = r"NM-Cr\NM-chfile-1.dat"       # Nonmagnetic Chromium
 # url = r"Multi_AFM-Cr\AFM-chfile.dat" # Multisite dependant Ferromagnetic Bcc Iron (Testing only)
 # url = r"NA-BCC-NM\chfile-1.dat"      # Nonmagnetic BCC Sodium
 # url = r"Cu-FCC\chfile-1.dat"         # FCC Copper
-# url = r"TaSe\chfile-TaSe.dat"         
+# url = r"TaSe\chfile-TaSe.dat"       
+# url = r"Testing\bcc-fe\chfile-1.dat"          # Testing File for bcc-fe 
+url = r"Testing\afm-cr\AFM-chfile.dat"          # Testing File for afm-cr
 
 base_folder = os.path.dirname(url)
 
@@ -99,7 +101,7 @@ k_suit_url = det_K_suit(
     f_url, 
     k_pot_url, 
     radius, 
-    base_change_matrix_NM, 
+    base_change_matrix_Bcc, 
     output_file=os.path.join(base_folder, "k_pot_coords.csv")
 )
 
@@ -115,8 +117,9 @@ X_file = compute_Xzz_all_site_dependent(
     kfile=k_match_url,
     site_map_file=f_url,
     U_params=[
-        (2.0, 2.0, 0.0, 0.0),  # U matrix for site type 1  # U↑↑, U↓↓, U↑↓, U↓↑
+        # (2.0, 2.0, 0.0, 0.0),  # U matrix for site type 1  # U↑↑, U↓↓, U↑↓, U↓↑
         # (2.5, 2.5, 0.0, 0.0),  # U matrix for site type 2  # U↑↑, U↓↓, U↑↓, U↓↑
+        (0.0, 0.0, 0.0, 0.0),  # U matrix for site type 1  # U↑↑, U↓↓, U↑↓, U↓↑
     ],
     output_file=os.path.join(base_folder, "xzz_output_iter.csv"),
     temp_txt=os.path.join(base_folder, "debug_iter.txt")
@@ -145,29 +148,29 @@ print(f"Data preparation and χ^zz computation done. Runtime: {time_end - time_s
 # )
 
 # Bcc-Fe Setup (enabled by default)
-# Length_scale = 5.42 # Bcc - Fe Length scaling
+Length_scale = 5.42 # Bcc - Fe Length scaling
 # Length_scale = 7.98 # NA - BCC Length scaling
-# plot_static_and_spin_decay(
-#     static_file=f_url,
-#     spin_file=X_file,
-#     transform_matrix= base_change_matrix_Bcc,
-#     scale_diagonal=[Length_scale] * 3,
-#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
-#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
-#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
-# )
-
-# NM-Cr Setup (enabled by default)
-Length_scale = 4.640997226251
 plot_static_and_spin_decay(
     static_file=f_url,
     spin_file=X_file,
-    transform_matrix=base_change_matrix_NM,
+    transform_matrix= base_change_matrix_Bcc,
     scale_diagonal=[Length_scale] * 3,
     output_static=os.path.join(base_folder, "static_decay_plot.png"),
     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
 )
+
+# # NM-Cr Setup (enabled by default)
+# Length_scale = 4.640997226251
+# plot_static_and_spin_decay(
+#     static_file=f_url,
+#     spin_file=X_file,
+#     transform_matrix=base_change_matrix_NM,
+#     scale_diagonal=[Length_scale] * 3,
+#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
+#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
+#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
+# )
 
 # # Cu-FCC Setup (enabled by default)
 # Length_scale = 6.760364108039488
@@ -194,7 +197,7 @@ plot_static_and_spin_decay(
 # )
 
 # === OPTIONAL 3D - Plot ===
-phys_plot(X_file)
+# phys_plot(X_file)
 time_end = t.time()
 print(f"Plotting finished. Runtime: {time_end - time_start:.2f} s")
 
