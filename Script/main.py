@@ -22,9 +22,9 @@ import os
 # url = r"Multi_AFM-Cr\AFM-chfile.dat" # Multisite dependant Ferromagnetic Bcc Iron (Testing only)
 # url = r"NA-BCC-NM\chfile-1.dat"      # Nonmagnetic BCC Sodium
 # url = r"Cu-FCC\chfile-1.dat"         # FCC Copper
-# url = r"TaSe\chfile-TaSe.dat"        
-# url = r"Testing\Testing_Fe\chfile-1.dat"
-url = r"Testing\Testing_AFM_Cr\AFM-chfile.dat"
+# url = r"TaSe\chfile-TaSe.dat"  
+
+url = r"BCC-Fe-FM\BCC-Fe-FM.dat"      
 
 base_folder = os.path.dirname(url)
 
@@ -85,7 +85,7 @@ time_start = t.time()
 f_url = format_data(
     url, 
     output_file=os.path.join(base_folder, "formated_data.csv"),
-    shift_map=shift_rules_AFM
+    shift_map=shift_rules_null
 )
 
 # === STEP 2: Determine Valid K-sites in Radius ===
@@ -101,7 +101,7 @@ k_suit_url = det_K_suit(
     f_url, 
     k_pot_url, 
     radius, 
-    base_change_matrix_AFM, 
+    base_change_matrix_Bcc, 
     output_file=os.path.join(base_folder, "k_pot_coords.csv")
 )
 
@@ -117,7 +117,7 @@ X_file = compute_Xzz_all_site_dependent(
     kfile=k_match_url,
     site_map_file=f_url,
     U_params=[
-        (0.0, 0.0, 0.0, 0.0),  # U matrix for site type 1  # U↑↑, U↓↓, U↑↓, U↓↑
+        (2.0, 2.0, 0.0, 0.0),  # U matrix for site type 1  # U↑↑, U↓↓, U↑↓, U↓↑
         # (2.5, 2.5, 0.0, 0.0),  # U matrix for site type 2  # U↑↑, U↓↓, U↑↓, U↓↑
     ],
     output_file=os.path.join(base_folder, "xzz_output_iter.csv"),
@@ -146,18 +146,18 @@ print(f"Data preparation and χ^zz computation done. Runtime: {time_end - time_s
 #     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
 # )
 
-# # Bcc-Fe Setup (enabled by default)
-# Length_scale = 5.42 # Bcc - Fe Length scaling
-# # Length_scale = 7.98 # NA - BCC Length scaling
-# plot_static_and_spin_decay(
-#     static_file=f_url,
-#     spin_file=X_file,
-#     transform_matrix= base_change_matrix_Bcc,
-#     scale_diagonal=[Length_scale] * 3,
-#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
-#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
-#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
-# )
+# Bcc-Fe Setup (enabled by default)
+Length_scale = 5.42 # Bcc - Fe Length scaling
+# Length_scale = 7.98 # NA - BCC Length scaling
+plot_static_and_spin_decay(
+    static_file=f_url,
+    spin_file=X_file,
+    transform_matrix= base_change_matrix_Bcc,
+    scale_diagonal=[Length_scale] * 3,
+    output_static=os.path.join(base_folder, "static_decay_plot.png"),
+    output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
+    output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
+)
 
 # # NM-Cr Setup (enabled by default)
 # Length_scale = 4.640997226251
