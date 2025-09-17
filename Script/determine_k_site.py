@@ -4,33 +4,55 @@ import json  # For saving results to JSON format
 from typing import Tuple
 import numpy as np
 
-# === Step 1: Generate potential k-site displacements within a radius ===
-def det_K_pot(min: int, max: int, R: int, output_file: str) -> str:
+# === Step 1: Generate potential k-site displacements with optional sublattice shifts ===
+def det_K_pot(min_val: int,
+              max_val: int,
+              R: int,
+              output_file: str,
+              shift_rules: dict = None) -> str: # type: ignore
     """
-    Computes all possible integer vectors (k_dx, k_dy, k_dz) such that
-    their squared Euclidean norm is >0 and <= R^2.
+    Computes all possible potential k-site vectors, optionally including sublattice
+    shift rules that generate fractional coordinates.
 
     Args:
-        min: Minimum coordinate value for each axis.
-        max: Maximum coordinate value for each axis.
+        min_val: Minimum coordinate value for each axis.
+        max_val: Maximum coordinate value for each axis.
         R: Radius cutoff.
         output_file: Path to save the potential k-site vectors.
-    Returns:
-        Path to saved CSV.
-    """
-    k_x_vals, k_y_vals, k_z_vals = [], [], []
-    for i in range(min, max + 1):
-        for j in range(min, max + 1):
-            for k in range(min, max + 1):
-                if 0 < i**2 + j**2 + k**2 <= R**2:
-                    k_x_vals.append(i)
-                    k_y_vals.append(j)
-                    k_z_vals.append(k)
+        shift_rules: Dict {(i,j): (dx,dy,dz)} specifying sublattice shifts.
+                     If None or empty, only integer lattice vectors are considered.
 
-    df = pd.DataFrame(list(zip(k_x_vals, k_y_vals, k_z_vals)), columns=["k_dx", "k_dy", "k_dz"])
+    Returns:
+        Path to saved CSV file containing potential k-site vectors.
+    """
+    k_coords = []
+
+    # Always generate the base integer lattice displacements
+    for i in range(min_val, max_val + 1):
+        for j in range(min_val, max_val + 1):
+            for k in range(min_val, max_val + 1):
+                if 0 < i**2 + j**2 + k**2 <= R**2:
+                    k_coords.append((i, j, k))
+
+    # If shift rules are provided, apply them to generate additional shifted coordinates
+    if shift_rules:
+        shifted_coords = []
+        for (i_site, j_site), shift in shift_rules.items():
+            sx, sy, sz = shift
+            for (i, j, k) in k_coords:
+                shifted_coords.append((i + sx, j + sy, k + sz))
+        k_coords.extend(shifted_coords)
+
+    # Remove duplicates by converting to a set, then back to sorted list
+    k_coords = sorted(set(k_coords))
+
+    # Save results
+    df = pd.DataFrame(k_coords, columns=["k_dx", "k_dy", "k_dz"])
     df.to_csv(output_file, sep=";", index=False)
-    print(f"Done: The string url is: {output_file} (Result)")
+
+    print(f"Done: The string url is: {output_file} (Result, with shift_rules={bool(shift_rules)})")
     return output_file
+
 
 # === Utility: Convert numpy values to standard Python tuple types ===
 def to_tuple(x):

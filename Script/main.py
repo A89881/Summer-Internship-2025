@@ -85,7 +85,8 @@ time_start = t.time()
 f_url = format_data(
     url, 
     output_file=os.path.join(base_folder, "formated_data.csv"),
-    shift_map=shift_rules_null
+    shift_map=shift_rules_AFM,
+    scale_response=1
 )
 
 # === STEP 2: Determine Valid K-sites in Radius ===
@@ -93,7 +94,8 @@ k_pot_url = det_K_pot(
     min, 
     max, 
     radius, 
-    output_file=os.path.join(base_folder, "k_pot_coords.csv")
+    output_file=os.path.join(base_folder, "k_pot_coords.csv"),
+    shift_rules=shift_rules_AFM
 )
 
 # === STEP 3: Find K-sites Valid for Each J-site Using Shifted Coordinates + Lattice Transform ===
@@ -101,7 +103,7 @@ k_suit_url = det_K_suit(
     f_url, 
     k_pot_url, 
     radius, 
-    base_change_matrix_Bcc, 
+    base_change_matrix_AFM, 
     output_file=os.path.join(base_folder, "k_pot_coords.csv")
 )
 
@@ -135,30 +137,30 @@ print(f"Data preparation and χ^zz computation done. Runtime: {time_end - time_s
 # === Optional: Enable Visualisation for Decay and Comparison Plots ===
 # === === === === === === === === === === === === === === === === ===
 
-# # AFM-Cr Setup (enabled by default)
-# Length_scale = 5.32988627
-# plot_static_and_spin_decay(
-#     static_file=f_url,
-#     spin_file=X_file,
-#     transform_matrix=base_change_matrix_AFM,
-#     scale_diagonal=[Length_scale] * 3,
-#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
-#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
-#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
-# )
-
-# Bcc-Fe Setup (enabled by default)
-Length_scale = 5.42 # Bcc - Fe Length scaling
-# Length_scale = 7.98 # NA - BCC Length scaling
+# AFM-Cr Setup (enabled by default)
+Length_scale = 5.32988627
 plot_static_and_spin_decay(
     static_file=f_url,
     spin_file=X_file,
-    transform_matrix= base_change_matrix_Bcc,
+    transform_matrix=base_change_matrix_AFM,
     scale_diagonal=[Length_scale] * 3,
     output_static=os.path.join(base_folder, "static_decay_plot.png"),
     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
 )
+
+# # Bcc-Fe Setup (enabled by default)
+# Length_scale = 5.42 # Bcc - Fe Length scaling
+# # Length_scale = 7.98 # NA - BCC Length scaling
+# plot_static_and_spin_decay(
+#     static_file=f_url,
+#     spin_file=X_file,
+#     transform_matrix= base_change_matrix_Bcc,
+#     scale_diagonal=[Length_scale] * 3,
+#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
+#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
+#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
+# )
 
 # # NM-Cr Setup (enabled by default)
 # Length_scale = 4.640997226251
