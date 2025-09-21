@@ -35,9 +35,9 @@ def phys_plot_by_i(input_file: str):
     merged['diff'] = np.abs(merged['Xzz'] - merged['Xzz_inv'])
 
     # Print summary
-    print(f"Number of sites checked: {len(merged)}")
-    print(f"Max difference under inversion symmetry: {merged['diff'].max():.6e}")
-    print(f"Mean difference: {merged['diff'].mean():.6e}")
+    print(f"[phys_plot_by_i] Number of sites checked: {len(merged)}")
+    print(f"[phys_plot_by_i] Max difference under inversion symmetry: {merged['diff'].max():.6e}")
+    print(f"[phys_plot_by_i] Mean difference: {merged['diff'].mean():.6e}")
 
     # Ensure 'i' column exists
     if 'i' not in df.columns:

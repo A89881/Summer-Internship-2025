@@ -57,7 +57,7 @@ def format_data(url: str,
 
     # Save and return
     df.to_csv(output_file, sep=';', index=False)
-    print(f"[format_data] Processing done written to output: {output_file}")
+    print(f"[format_data] Processing done written to: {output_file}")
     return output_file
 
 import csv
