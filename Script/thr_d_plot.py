@@ -69,6 +69,7 @@ def phys_plot_by_i(input_file: str):
         cbar.ax.set_yticklabels([f"{b:.1e}" for b in bounds])
         ax.set_xlabel('x'); ax.set_ylabel('y'); ax.set_zlabel('z') # type: ignore
         ax.set_title(f'3D Scatter Plot of Xzz (i={i_val})')
+        print(f"[phys_plot_by_i] Displayed 3D scatter plot for i={i_val} | total sites={len(df_i)}")
         plt.show()  # interactive plot
 
         # === 2D heatmaps per z-layer ===
