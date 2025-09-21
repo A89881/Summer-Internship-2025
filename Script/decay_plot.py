@@ -70,7 +70,7 @@ def plot_static_and_spin_decay(
     plt.tight_layout()
     plt.savefig(output_static, dpi=100)
     plt.close()
-    print(f"Static decay plot saved to: {output_static}")
+    print(f"[plot_static_and_decay] Static decay plot saved to: {output_static}")
 
     # === Plot 2: χᶻᶻ decay ===
     sort_idx_spin = np.argsort(dists_spin)
@@ -87,7 +87,7 @@ def plot_static_and_spin_decay(
     plt.tight_layout()
     plt.savefig(output_xzz, dpi=100)
     plt.show()
-    print(f"χᶻᶻ decay plot saved to: {output_xzz}")
+    print(f"[plot_static_and_decay] LSS decay plot saved to: {output_xzz}")
 
     # === Plot 3: Comparison χ⁰ vs χᶻᶻ ===
     plt.figure()
@@ -109,4 +109,4 @@ def plot_static_and_spin_decay(
     plt.tight_layout()
     plt.savefig(output_comparison, dpi=100)
     plt.show()
-    print(f"Comparison decay plot saved to: {output_comparison}")
+    print(f"[plot_static_and_decay] Comparison decay plot saved to: {output_comparison}")

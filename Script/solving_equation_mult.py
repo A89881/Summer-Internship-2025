@@ -159,6 +159,6 @@ def compute_Xzz_all_site_dependent(xij_file: str,
 
     # Write output CSV
     pd.DataFrame(results).to_csv(output_file, sep=';', index=False)
-    print(f"Done: χzz data written to {output_file}")
-    print(f"Debug output written to {temp_txt}")
+    print(f"[compute_Xzz] χzz data written to: {output_file}")
+    print(f"[compute_Xzz] Debug output written to: {temp_txt}")
     return output_file

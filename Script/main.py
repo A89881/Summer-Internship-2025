@@ -19,12 +19,7 @@ import os
 # url = r"Bcc-Fe\chfile-1.dat"         # Ferromagnetic Bcc Iron
 # url = r"AFM-Cr\AFM-chfile.dat"       # Antiferromagnetic Chromium (2 sublattices)
 # url = r"NM-Cr\NM-chfile-1.dat"       # Nonmagnetic Chromium
-# url = r"Multi_AFM-Cr\AFM-chfile.dat" # Multisite dependant Ferromagnetic Bcc Iron (Testing only)
-# url = r"NA-BCC-NM\chfile-1.dat"      # Nonmagnetic BCC Sodium
-# url = r"Cu-FCC\chfile-1.dat"         # FCC Copper
-# url = r"TaSe\chfile-TaSe.dat"       
-# url = r"Testing\bcc-fe\chfile-1.dat"          # Testing File for bcc-fe 
-url = r"Testing\afm_cr_1\AFM-chfile.dat"          # Testing File for afm-cr
+url = r"TaSe\chfile-TaSe.dat"       
 
 base_folder = os.path.dirname(url)
 
@@ -38,20 +33,15 @@ max = 10    # Grid range maximum
 # Defaults to, zero-shift if empty dict, or if site shift not given
 # Input format: (i, j): (dx, dy, dz) shifting vector'
 
-shift_rules_null = {
-
-}
-
+shift_rules_null = {}
 shift_rules_AFM = {
     (1, 2): (-0.5, -0.5, -0.5),
     (2, 1): (0.5, 0.5, 0.5),
 }
-
 shift_rules_TaSe = {
     (1, 2): (0.0, 0.0, 0.5),
     (2, 1): (0.0, 0.0, -0.5)
 }
-
 # === TRANSFORMATION MATRIX (depends on lattice symmetry and geometry) ===
 base_change_matrix_NM = [
     [1.0, 0.0, 0.0],
@@ -73,7 +63,6 @@ base_change_matrix_FCC = [
     [0.0, 0.5, 0.5],
     [-0.5, 0.5, 0.0]
 ]
-
 base_change_matrix_TaSe = [
     [0.866025403784439, -0.5, 0.0],
     [0.0, 1.0, 0.0],
@@ -85,42 +74,39 @@ time_start = t.time()
 f_url = format_data(
     url, 
     output_file=os.path.join(base_folder, "formated_data.csv"),
-    shift_map=shift_rules_AFM,
+    shift_map=shift_rules_TaSe,
     scale_response=1
 )
 
-# # === STEP 3: Find K-sites Valid for Each J-site Using Shifted Coordinates + Lattice Transform ===
-# k_suit_url = det_K_suit(
-#     f_url, 
-#     radius, 
-#     base_change_matrix_AFM, 
-#     output_file=os.path.join(base_folder, "k_pot_coords.csv")
-# )
+# === STEP 2: Find K-sites Valid for Each J-site Using Shifted Coordinates + Lattice Transform ===
+k_suit_url = det_K_suit(
+    f_url, 
+    radius, 
+    base_change_matrix_TaSe, 
+    output_file=os.path.join(base_folder, "k_pot_coords.csv")
+)
 
-# # === STEP 4: Group K by J into JSON (for input to Dyson solver)  ===
-# k_match_url = det_K_match_json(k_suit_url, json_out=os.path.join(base_folder, "neighbouring_k_to_j.json"))
+# === STEP 3: Group K by J into JSON (for input to Dyson solver)  ===
+k_match_url = det_K_match_json(k_suit_url, json_out=os.path.join(base_folder, "neighbouring_k_to_j.json"))
 
-k_match_url = r"Testing\afm_cr_1\neighbouring_k_to_j.json"
-# === STEP 5: Define Kernel Parameters and Solve for χ^zz ===
+# === STEP 4: Define Kernel Parameters and Solve for χ^zz ===
 # === ADVANCED: Example for future site-dependent U implementations (Multi-U KERNEL systems) ===
 X_file = compute_Xzz_all_site_dependent(
     xij_file=f_url,
     kfile=k_match_url,
     site_map_file=f_url,
     U_params=[
-        # (2.0, 2.0, 0.0, 0.0),  # U matrix for site type 1  # U↑↑, U↓↓, U↑↓, U↓↑
-        # (2.5, 2.5, 0.0, 0.0),  # U matrix for site type 2  # U↑↑, U↓↓, U↑↓, U↓↑
         (0.0, 0.0, 0.0, 0.0),  # U matrix for site type 1  # U↑↑, U↓↓, U↑↓, U↓↑
     ],
     output_file=os.path.join(base_folder, "xzz_output_iter.csv"),
     temp_txt=os.path.join(base_folder, "debug_iter.txt")
 )
 
-# === STEP 6: Merge Raw + Computed Data (useful for plotting/validation/export) ===
+# === STEP 5: Merge Raw + Computed Data (useful for plotting/validation/export) ===
 merge_format_and_xzz(f_url, X_file, output_file=os.path.join(base_folder, "formated_output.dat"))
 
 time_end = t.time()
-print(f"Data preparation and χ^zz computation done. Runtime: {time_end - time_start:.2f} s")
+print(f"[main.py] Data preparation and χ^zz computation done. Runtime: {time_end - time_start:.2f} s")
 
 # === === === === === === === === === === === === === === === === ===
 # === Optional: Enable Visualisation for Decay and Comparison Plots ===
@@ -163,33 +149,21 @@ print(f"Data preparation and χ^zz computation done. Runtime: {time_end - time_s
 #     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
 # )
 
-# # Cu-FCC Setup (enabled by default)
-# Length_scale = 6.760364108039488
-# plot_static_and_spin_decay(
-#     static_file=f_url,
-#     spin_file=X_file,
-#     transform_matrix= base_change_matrix_FCC,
-#     scale_diagonal=[Length_scale] * 3,
-#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
-#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
-#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
-# )
+# TaSe2 Setup (enabled by default)
+Length_scale = 6.760364108039488
+plot_static_and_spin_decay(
+    static_file=f_url,
+    spin_file=X_file,
+    transform_matrix= base_change_matrix_TaSe,
+    scale_diagonal=[Length_scale] * 3,
+    output_static=os.path.join(base_folder, "static_decay_plot.png"),
+    output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
+    output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
+)
 
-# # TaSe2 Setup (enabled by default)
-# Length_scale = 6.760364108039488
-# plot_static_and_spin_decay(
-#     static_file=f_url,
-#     spin_file=X_file,
-#     transform_matrix= base_change_matrix_TaSe,
-#     scale_diagonal=[Length_scale] * 3,
-#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
-#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
-#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
-# )
-
-# === OPTIONAL 3D - Plot ===
-phys_plot_by_i(X_file)
+# # === OPTIONAL 3D - Plot ===
+# phys_plot_by_i(X_file)
 time_end = t.time()
-print(f"Plotting finished. Runtime: {time_end - time_start:.2f} s")
+print(f"[main.py] Plotting finished. Runtime: {time_end - time_start:.2f} s")
 
 

@@ -72,8 +72,8 @@ def phys_plot_by_i(input_file: str):
         plt.show()  # interactive plot
 
         # === 2D heatmaps per z-layer ===
-        output_dir = os.path.join(os.path.dirname(input_file), f"plots_i{i_val}")
-        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(os.path.dirname(input_file), f"plots_i{i_val}")
+        os.makedirs(output_path, exist_ok=True)
 
         z_layers = sorted(df_i['z'].unique())
         for z_val in z_layers:
@@ -102,6 +102,6 @@ def phys_plot_by_i(input_file: str):
             cbar.ax.set_yticklabels([f"{b:.1e}" for b in bounds])
 
             plt.tight_layout()
-            plt.savefig(os.path.join(output_dir, f'i{i_val}_z{z_val:.1f}.png'), dpi=300)
+            plt.savefig(os.path.join(output_path, f'i{i_val}_z{z_val:.1f}.png'), dpi=300)
             plt.close()
-            print(f"Saved 2D heatmap for i={i_val}, z={z_val}")
+            print(f"[phys_plot_by_i] Saved 2D heatmap to: i={i_val}, z={z_val}, path={output_path}")

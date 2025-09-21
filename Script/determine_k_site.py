@@ -77,7 +77,7 @@ def det_K_suit(f_url: str,
 
     df_out = pd.DataFrame(out_rows, columns=["i", "j", "j-coordinate", "k_j", "k-coordinate"])
     df_out.to_csv(output_file, sep=";", index=False)
-    print(f"det_K_suit wrote {len(df_out)} rows → {output_file}")
+    print(f"[det_K_suit] Wrote {len(df_out)} rows written to: {output_file}")
     return output_file
 
 # --- main step 2 ---
@@ -108,6 +108,6 @@ def det_K_match_json(det_k_csv: str, json_out: str) -> str:
 
     with open(json_out, "w", encoding="utf-8") as f:
         json.dump(mapping, f, indent=2)
-
-    print(f"det_K_match_json wrote {len(mapping)} keys → {json_out}")
+        
+    print(f"[det_K_match_json] Wrote {len(mapping)} keys written to: {json_out}")
     return json_out

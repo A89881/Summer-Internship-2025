@@ -57,7 +57,7 @@ def format_data(url: str,
 
     # Save and return
     df.to_csv(output_file, sep=';', index=False)
-    print(f"Done: The string url is: {output_file} (Shift-augmented, Scaled={scale_response})")
+    print(f"[format_data] Processing done written to output: {output_file}")
     return output_file
 
 import csv
@@ -104,6 +104,5 @@ def merge_format_and_xzz(format_file: str, xzz_file: str, output_file: str) -> N
                 f"{int(i):<4}{int(j):<4}{dx_f:7.3f}{dy_f:7.3f}{dz_f:7.3f}"
                 f"{float(Jij):12.6f}{float(chi_up):15.6E}{float(chi_down):15.6E}{xzz_val:15.6E}\n"
             )
-
-    print(f"Done: merged .dat file written to {output_file}")
+    print(f"[merged_format] Merged .dat file written written to: {output_file}")
 
