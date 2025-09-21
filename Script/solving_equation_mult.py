@@ -4,93 +4,142 @@ import ast
 import json
 from typing import Dict, List, Tuple
 
-# === 1. Parse bare response Xij file ===
-def parse_xij_file(xij_path: str) -> Tuple[Dict[Tuple[float, float, float], float],
-                                           Dict[Tuple[float, float, float], float]]:
+# ================================================================
+# 1. Parse bare response Xij file with (i,j) included
+# ================================================================
+
+def parse_xij_file(xij_path: str) -> Tuple[
+    Dict[Tuple[int, int, Tuple[float, float, float]], float],
+    Dict[Tuple[int, int, Tuple[float, float, float]], float]
+]:
     """
-    Parses the formatted bare response file (e.g. formated_data.csv), where each row contains:
-    - A relative coordinate (dx, dy, dz)
-    - The corresponding spin-up (χ⁰↑) and spin-down (χ⁰↓) components
+    Parse bare response file containing site interaction data.
+
+    Input CSV columns:
+        i ; j ; dx ; dy ; dz ; χ⁰↑ ; χ⁰↓
 
     Returns:
-        Two dictionaries mapping (dx, dy, dz) to χ⁰↑ and χ⁰↓ respectively.
+        (x_map_up, x_map_down), where each dict maps
+        key = (i, j, (dx, dy, dz)) → χ⁰↑ or χ⁰↓
     """
     df = pd.read_csv(xij_path, sep=';')
     x_map_up = {}
     x_map_down = {}
+
     for _, row in df.iterrows():
-        coord = (float(row['dx']), float(row['dy']), float(row['dz']))
-        x_map_up[coord] = row['χ⁰↑']
-        x_map_down[coord] = row['χ⁰↓']
+        key = (
+            int(row['i']),
+            int(row['j']),
+            (float(row['dx']), float(row['dy']), float(row['dz']))
+        )
+        x_map_up[key] = row['χ⁰↑']
+        x_map_down[key] = row['χ⁰↓']
+
     return x_map_up, x_map_down
 
-# === 2. Parse j-to-k site mapping file (from JSON or CSV) ===
-def parse_k_contrib_file(kfile_path: str) -> Dict[Tuple[float, float, float], List[Tuple[float, float, float]]]:
+
+# ================================================================
+# 2. Parse j-to-k site mapping file (currently JSON only)
+# ================================================================
+
+def parse_k_contrib_file(kfile_path: str) -> Dict[
+    Tuple[int, int, Tuple[float, float, float]],
+    List[Tuple[int, Tuple[float, float, float]]]
+]:
     """
-    Loads the mapping from each j-site to its contributing k-sites.
+    Load mapping from each j-site to its contributing k-sites.
+
+    JSON input format:
+        {
+          "(i, j, dx, dy, dz)": [
+            [j_for_k1, kx, ky, kz],
+            [j_for_k2, kx, ky, kz], ...
+          ]
+        }
 
     Returns:
         Dictionary of the form:
-        (j_dx, j_dy, j_dz) → [(k1_dx, k1_dy, k1_dz), (k2_dx, ...), ...]
+        (i, j, (dx, dy, dz)) → [(j_for_k, (kx, ky, kz)), ...]
     """
-    def to_float_tuple(t) -> Tuple[float, float, float]:
-        return tuple(float(x) for x in t)  # type: ignore # converts stringified tuples to float tuples
+    if not kfile_path.endswith(".json"):
+        raise ValueError("Currently only JSON format supported for kfile.")
 
-    if kfile_path.endswith(".json"):
-        with open(kfile_path, 'r', encoding='utf-8') as f:
-            json_data = json.load(f)
-        return {
-            to_float_tuple(ast.literal_eval(j_str)): [to_float_tuple(k) for k in k_list]
-            for j_str, k_list in json_data.items()
-        }
-    else:  # assume CSV
-        contrib_map = {}
-        with open(kfile_path, 'r') as f:
-            next(f)  # skip header
-            for line in f:
-                j_str, k_str_list = line.strip().split(';')
-                j_coord = to_float_tuple(ast.literal_eval(j_str))
-                k_coords = [to_float_tuple(k) for k in ast.literal_eval(k_str_list)]
-                contrib_map[j_coord] = k_coords
-        return contrib_map
+    with open(kfile_path, 'r', encoding='utf-8') as f:
+        json_data = json.load(f)
 
-# === 3. Lookup χ⁰↑ and χ⁰↓ block for a given relative displacement ===
-def get_x_block(rel: Tuple[float, float, float],
+    contrib_map = {}
+    for j_str, k_list in json_data.items():
+        # j_str example: "(1, 2, -1.5, -1.5, -1.5)"
+        j_tuple = ast.literal_eval(j_str)
+        i_val, j_val, dx, dy, dz = j_tuple
+        j_key = (int(i_val), int(j_val), (float(dx), float(dy), float(dz)))
+
+        k_entries = []
+        for k_entry in k_list:
+            j_for_k, kx, ky, kz = k_entry
+            k_entries.append((int(j_for_k), (float(kx), float(ky), float(kz))))
+
+        contrib_map[j_key] = k_entries
+
+    return contrib_map
+
+
+# ================================================================
+# 3. Lookup χ⁰↑ and χ⁰↓ for a given (i,j,(dx,dy,dz)) key
+# ================================================================
+
+def get_x_block(rel_key: Tuple[int, int, Tuple[float, float, float]],
                 x_map_up: Dict,
                 x_map_down: Dict) -> Tuple[float, float]:
     """
-    Returns the spin-resolved χ⁰ values for a relative position.
-    If rel is (0,0,0) or not found in the data, it returns (0.0, 0.0).
-    """
-    if rel == (0.0, 0.0, 0.0):
-        return 0.0, 0.0
-    return x_map_up.get(rel, 0.0), x_map_down.get(rel, 0.0)
+    Lookup χ⁰↑ and χ⁰↓ for a specific (i, j, coord) key.
 
-# === 4. Dyson-like equation solver ===
+    Args:
+        rel_key: (i, j, (dx, dy, dz))
+        x_map_up: dict with χ⁰↑ values
+        x_map_down: dict with χ⁰↓ values
+
+    Returns:
+        (χ⁰↑, χ⁰↓), defaults to (0,0) if key not found
+    """
+    return x_map_up.get(rel_key, 0.0), x_map_down.get(rel_key, 0.0)
+
+
+# ================================================================
+# 4. Dyson-like equation solver
+# ================================================================
+
 def compute_Kij_direct(Xij: np.ndarray,
                        Xik_list: List[np.ndarray],
                        U: np.ndarray) -> np.ndarray:
     """
-    Solves the Dyson-like equation:
+    Solve Dyson-like equation for the renormalized response Kij.
+
+    Equation:
         Kij = (I - Σ Xik · U)^(-1) · Xij
 
     Args:
-        Xij: 2x2 matrix of static response between i and j.
-        Xik_list: List of 2x2 matrices (for each k-contribution).
-        U: 2x2 exchange-correlation kernel for site type of j.
+        Xij:   2x2 matrix (bare response for j-site)
+        Xik_list: list of 2x2 matrices for contributing k-sites
+        U:     2x2 site-dependent interaction kernel
 
     Returns:
-        2x2 matrix representing Kij (full response).
+        2x2 Kij matrix
     """
-    S = sum(Xik_list)
+    S = sum(Xik_list)  # Σ Xik
     identity = np.eye(2)
     A = identity - S @ U
+
     try:
         return np.linalg.solve(A, Xij)
     except np.linalg.LinAlgError:
         raise RuntimeError("Matrix inversion failed. Possibly singular or ill-conditioned.")
 
-# === 5. Full χ^zz evaluation with site-dependent U kernels ===
+
+# ================================================================
+# 5. Full χ^zz evaluation with site-dependent U kernels
+# ================================================================
+
 def compute_Xzz_all_site_dependent(xij_file: str,
                                    kfile: str,
                                    site_map_file: str,
@@ -98,25 +147,30 @@ def compute_Xzz_all_site_dependent(xij_file: str,
                                    output_file: str,
                                    temp_txt: str) -> str:
     """
-    Computes longitudinal spin susceptibility χ^zz for each j-site, using a different
-    U kernel per site-type as indicated in site_map_file.
+    Compute longitudinal spin susceptibility χ^zz for all j-sites,
+    using site-dependent U kernels.
 
     Args:
-        xij_file: Path to file containing χ⁰↑, χ⁰↓ and displacement vectors.
-        kfile: JSON or CSV that maps each j-site to its contributing k-sites.
-        site_map_file: CSV with dx, dy, dz and j (site type) for every j-site.
-        U_params: List of U kernels (in tuple form), one for each site type.
-        output_file: CSV output of j-coordinates and their computed χ^zz.
-        temp_txt: Debug log path for inspecting internal matrix components.
+        xij_file:      CSV with bare response χ⁰↑, χ⁰↓
+        kfile:         JSON file mapping j-sites to k-sites
+        site_map_file: CSV mapping j-coordinates → site type
+        U_params:      list of tuples (U↑↑, U↓↓, U↑↓, U↓↑) per site type
+        output_file:   output CSV path
+        temp_txt:      debug log path
 
     Returns:
-        Path to the CSV output file.
+        str: output CSV path
+
+    Output CSV columns:
+        i ; j ; j-coordinate ; N_k ; Xzz
     """
-    # Load bare response functions
+    # --- Load bare response functions ---
     x_map_up, x_map_down = parse_xij_file(xij_file)
-    # Load j-to-k contribution map
+
+    # --- Load j-to-k contribution map ---
     contrib_map = parse_k_contrib_file(kfile)
-    # Load j-site types from format_file
+
+    # --- Load j-site → type mapping ---
     site_df = pd.read_csv(site_map_file, sep=';')
     j_site_type = {
         (float(row['dx']), float(row['dy']), float(row['dz'])): int(row['j'])
@@ -125,51 +179,62 @@ def compute_Xzz_all_site_dependent(xij_file: str,
 
     results = []
     with open(temp_txt, 'w', encoding='utf-8') as debug_out:
-        for j_idx, (j_coord, k_coords) in enumerate(contrib_map.items()):
-            if not k_coords:
-                continue
+        for j_idx, (j_key, k_entries) in enumerate(contrib_map.items()):
             try:
-                # === Identify site type and corresponding U matrix ===
-                site_index = j_site_type.get(j_coord, 1)  # fallback to site type 1
-                site_index = min(site_index, len(U_params))  # prevent index out-of-bounds
-                U_vals = U_params[site_index - 1]  # convert 1-based to 0-based index
+                i_val, j_val, j_coord = j_key
+
+                if not k_entries:
+                    continue
+
+                # --- Select site-specific kernel U ---
+                site_index = j_site_type.get(j_coord, 1)  # fallback = 1
+                site_index = min(site_index, len(U_params))
+                U_vals = U_params[site_index - 1]
                 U = np.array([
                     [U_vals[0], U_vals[2]],
                     [U_vals[3], U_vals[1]]
                 ])
 
-                # === Get static Xij for current j ===
-                xij_up, xij_down = get_x_block(j_coord, x_map_up, x_map_down)
-                Xij = np.diag([xij_up, xij_down])
+                # --- Bare response for j-site ---
+                Xij_up, Xij_down = get_x_block((i_val, j_val, j_coord), x_map_up, x_map_down)
+                Xij = np.diag([Xij_up, Xij_down])
 
-                # === Accumulate contributions from each k-site ===
+                # --- Contributions from k-sites ---
                 Xik_list = []
-                for kq in k_coords:
-                    rel = tuple(np.subtract(kq, (0.0, 0.0, 0.0)))  # shift is already applied before
-                    x_up, x_down = get_x_block(rel, x_map_up, x_map_down)
+                for j_for_k, k_coord in k_entries:
+                    key_k = (i_val, j_for_k, k_coord)
+                    x_up, x_down = get_x_block(key_k, x_map_up, x_map_down)
                     Xik_list.append(np.diag([x_up, x_down]))
 
-                # === Dyson equation solver ===
+                # --- Dyson solver ---
                 Kij = compute_Kij_direct(Xij, Xik_list, U)
 
-                # === χ^zz = (K↑↑ + K↓↓ - K↑↓ - K↓↑)/4 ===
+                # --- χ^zz calculation ---
                 chi_zz = (Kij[0, 0] + Kij[1, 1] - Kij[0, 1] - Kij[1, 0]) / 4.0
-                results.append({'j-coordinate': str(j_coord), 'Xzz': chi_zz})
 
-                # === Optional debug info for first few sites ===
+                # --- Store results ---
+                results.append({
+                    'i': i_val,
+                    'j': j_val,
+                    'j-coordinate': str(j_coord),
+                    'N_k': len(k_entries),
+                    'Xzz': chi_zz
+                })
+
+                # --- Debug logging (only first few sites) ---
                 if j_idx < 3:
-                    debug_out.write(f"=== j = {j_coord} ===\n")
+                    debug_out.write(f"=== j = {j_coord} (i={i_val}, j={j_val}) ===\n")
                     debug_out.write(f"Xij:\n{Xij}\n")
                     debug_out.write(f"Sum(Xik):\n{sum(Xik_list)}\n")
                     debug_out.write(f"Kij:\n{Kij}\n")
                     debug_out.write(f"χzz = {chi_zz}\n\n")
 
             except Exception as e:
-                print(f"[ERROR] j = {j_coord}: {e}")
+                print(f"[ERROR] j = {j_key}: {e}")
                 continue
 
-    # === Write results to output file ===
-    pd.DataFrame(results).to_csv(output_file, index=False)
-    print(f"Done: χzz data written to {output_file}")
-    print(f"Debug output written to {temp_txt}")
+    # --- Save results to CSV ---
+    pd.DataFrame(results).to_csv(output_file, sep=';', index=False)
+    print(f"[compute_Xzz] χzz data written to: {output_file}")
+    print(f"[compute_Xzz] Debug output written to: {temp_txt}")
     return output_file

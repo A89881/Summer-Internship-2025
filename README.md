@@ -3,7 +3,7 @@
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This repository implements a general-purpose Python framework to compute the **longitudinal spin susceptibility** $\( \chi^{zz} \)$ in real space. The solver uses a Dyson-like equation to compute the response per site based on bare static susceptibilities. It is designed to be general for **any crystal system**, given that appropriate lattice transformations, sublattice shifts, and interaction parameters are defined.
+This repository implements a general-purpose Python framework to compute the **longitudinal spin susceptibility** \$$\chi^{zz}$\$ in real space. The solver uses a Dyson-like equation to compute the response per site based on bare static susceptibilities. It is designed to be general for **any crystal system**, given that appropriate lattice transformations, sublattice shifts, and interaction parameters are defined.
 
 ---
 
@@ -14,13 +14,14 @@ The pipeline consists of the following steps:
 1. Format raw RSPt-style input files (bare response data).
 2. Generate candidate and valid k-sites for each j-site.
 3. Map j-sites to valid k-sites based on distance and lattice transform.
-4. Solve a Dyson-like system for $\( \chi^{zz} \)$ site-by-site.
-5. Optionally visualize results and verify symmetry.
+4. Solve a Dyson-like system for \$$\chi^{zz}$\$ site-by-site.
+5. Visualize results and check **symmetry consistency**.
 
 The script supports systems with:
-- Arbitrary Bravais lattices
-- Multiple sublattices and site-dependent shifting
-- Multi-site interaction kernels $\( U_{↑↑}, U_{↓↓}, U_{↑↓}, U_{↓↑} \)$
+
+* Arbitrary Bravais lattices
+* Multiple sublattices and site-dependent shifting
+* Multi-site interaction kernels \$$U_{↑↑}, U_{↓↓}, U_{↑↓}, U_{↓↑}$\$
 
 ---
 
@@ -28,27 +29,28 @@ The script supports systems with:
 
 ```text
 root/
-├── main.py                     # Main execution and configuration script
-│
-├── format.py                   # Step 1: format input file to CSV
-├── determine_k_site.py         # Step 2: find valid k-sites per j
-├── solving_equation_mult.py    # Step 3: Dyson equation solver for χᶻᶻ
-├── decay_plot.py               # Step 4: decay plots
-├── thr_d_plot.py               # Step 5: optional 3D/FT visualization
-│
-├── input-file.dat              # Raw RSPt output (user-provided)
-│
-├── formated_data.csv           # Output: parsed χ⁰ data
-├── k_pot_coords.csv            # Output: candidate k-sites
-├── neighbouring_k_to_j.json    # Output: final k → j mapping
-├── xzz_output_iter.csv         # Output: solved χᶻᶻ per j-site
-├── formated_output.dat         # Output: combined χ⁰ and χᶻᶻ
-├── debug_iter.txt              # Optional debug log
-│
-├── static_decay_plot.png       # Plot: χ⁰ decay
-├── xzz_decay_plot.png          # Plot: χᶻᶻ decay
-├── comparison_decay_plot.png   # Overlay plot: χ⁰ vs χᶻᶻ
-````
+├── script/
+    ├── main.py                     # Main execution and configuration script
+    ├── format.py                   # Step 1: format input file to CSV
+    ├── determine_k_site.py         # Step 2: find valid k-sites per j
+    ├── solving_equation_mult.py    # Step 3: Dyson equation solver for χᶻᶻ
+    ├── decay_plot.py               # Step 4: decay plots and symmetry check
+    ├── thr_d_plot.py               # Step 5: optional 3D/Z-layer visualization
+    │
+├── YourFolder/           # Output will be in the same folder as this
+    ├── input-file.dat              # Raw RSPt output (user-provided)
+    │
+    ├── formated_data.csv           # Output: parsed χ⁰ data
+    ├── k_pot_coords.csv            # Output: candidate k-sites
+    ├── neighbouring_k_to_j.json    # Output: final k → j mapping
+    ├── xzz_output_iter.csv         # Output: solved χᶻᶻ per j-site
+    ├── formated_output.dat         # Output: combined χ⁰ and χᶻᶻ
+    ├── debug_iter.txt              # Output: debug log with the equation setup of the first three points
+    │
+    ├── static_decay_plot.png       # Plot: χ⁰ decay
+    ├── xzz_decay_plot.png          # Plot: χᶻᶻ decay
+    ├── comparison_decay_plot.png   # Overlay plot: χ⁰ vs χᶻᶻ
+```
 
 ---
 
@@ -91,9 +93,9 @@ For example, for a cubic system:
 
 ```python
 base_change_matrix = [
-    [1.0, 0.0, 0.0],  e_x
-    [0.0, 1.0, 0.0],  e_y
-    [0.0, 0.0, 1.0],  e_z
+    [1.0, 0.0, 0.0],  # e_x
+    [0.0, 1.0, 0.0],  # e_y
+    [0.0, 0.0, 1.0],  # e_z
 ]
 ```
 
@@ -153,23 +155,24 @@ This will:
 * Format the data
 * Compute neighborhoods
 * Solve for χᶻᶻ
-* Optionally generate plots
+* Generate plots
+* **Check input symmetry consistency**
 
 ---
 
 ## Output Files
 
-| File                        | Purpose                              |
-| --------------------------- | ------------------------------------ |
-| `formated_data.csv`         | Parsed and shifted input             |
-| `k_pot_coords.csv`          | All spatial candidates for k-sites   |
-| `neighbouring_k_to_j.json`  | Mapping of j-sites to valid k-sites  |
-| `xzz_output_iter.csv`       | Resulting χᶻᶻ values for all j-sites |
-| `formated_output.dat`       | Combined input and output            |
-| `debug_iter.txt`            | Optional log                         |
-| `xzz_decay_plot.png`        | Decay of χᶻᶻ                         |
-| `static_decay_plot.png`     | Decay of χ⁰                          |
-| `comparison_decay_plot.png` | Overlay: χ⁰ vs χᶻᶻ                   |
+| File                        | Purpose                                 |
+| --------------------------- | --------------------------------------- |
+| `formated_data.csv`         | Parsed and shifted input                |
+| `k_pot_coords.csv`          | All spatial candidates for k-sites      |
+| `neighbouring_k_to_j.json`  | Mapping of j-sites to valid k-sites     |
+| `xzz_output_iter.csv`       | Resulting χᶻᶻ values for all j-sites    |
+| `formated_output.dat`       | Combined input and output               |
+| `debug_iter.txt`            | Optional log                            |
+| `xzz_decay_plot.png`        | Decay of χᶻᶻ                            |
+| `static_decay_plot.png`     | Decay of χ⁰                             |
+| `comparison_decay_plot.png` | Overlay: χ⁰ vs χᶻᶻ + symmetry check log |
 
 ---
 
@@ -199,7 +202,7 @@ Tested with Python 3.8+
 
 * Supports general materials and lattice symmetries
 * Accepts arbitrary sublattice shifting and kernel structure
-* Input must be symmetric and consistent for physical accuracy
+* **Includes a symmetry check** to validate input consistency before solving
 * Output visualizations help verify decay and symmetry
 
 ---
@@ -207,3 +210,6 @@ Tested with Python 3.8+
 ## License
 
 MIT License. See [LICENSE](LICENSE) for terms.
+
+---
+

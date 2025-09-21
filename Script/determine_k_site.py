@@ -1,163 +1,177 @@
 import pandas as pd
-import ast  # For safely converting string representations to Python tuples
-import json  # For saving results to JSON format
-from typing import Tuple
+import ast
+import json
 import numpy as np
+from typing import Tuple, List
 
-# === Step 1: Generate potential k-site displacements within a radius ===
-def det_K_pot(min: int, max: int, R: int, output_file: str) -> str:
-    """
-    Computes all possible integer vectors (k_dx, k_dy, k_dz) such that
-    their squared Euclidean norm is >0 and <= R^2.
+# ================================================================
+# Utility functions
+# ================================================================
 
-    Args:
-        min: Minimum coordinate value for each axis.
-        max: Maximum coordinate value for each axis.
-        R: Radius cutoff.
-        output_file: Path to save the potential k-site vectors.
-    Returns:
-        Path to saved CSV.
-    """
-    k_x_vals, k_y_vals, k_z_vals = [], [], []
-    for i in range(min, max + 1):
-        for j in range(min, max + 1):
-            for k in range(min, max + 1):
-                if 0 < i**2 + j**2 + k**2 <= R**2:
-                    k_x_vals.append(i)
-                    k_y_vals.append(j)
-                    k_z_vals.append(k)
-
-    df = pd.DataFrame(list(zip(k_x_vals, k_y_vals, k_z_vals)), columns=["k_dx", "k_dy", "k_dz"])
-    df.to_csv(output_file, sep=";", index=False)
-    print(f"Done: The string url is: {output_file} (Result)")
-    return output_file
-
-# === Utility: Convert numpy values to standard Python tuple types ===
-def to_tuple(x):
-    return tuple(float(i) if isinstance(i, np.floating) else int(i) for i in x)
-
-# === Utility: Format tuples cleanly for output as strings ===
 def clean_tuple_str(t: Tuple[float, float, float]) -> str:
     """
-    Converts a tuple to a string representation without trailing .0 for integers.
-    E.g., (2.0, -1.0, 0.5) -> "(2, -1, 0.5)"
+    Convert a numeric 3-tuple into a clean string.
+    Integers are printed without decimal, floats kept as floats.
+    Example:
+      (0.0, 1.5, 2.0) -> "(0, 1.5, 2)"
     """
-    return "(" + ", ".join(str(int(x)) if x == int(x) else str(x) for x in t) + ")"
+    return "(" + ", ".join(str(int(x)) if float(x).is_integer() else str(float(x)) for x in t) + ")"
 
-# === Step 2: Determine valid k-site neighbors for each j-site using base transformation ===
+def _detect_column(df: pd.DataFrame, candidates: List[str], name: str) -> str:
+    """
+    Detect which column in a DataFrame matches a given logical field.
+
+    Args:
+        df (pd.DataFrame): input dataframe
+        candidates (List[str]): possible column names
+        name (str): logical label (e.g. 'i' or 'j') for error message
+
+    Returns:
+        str: column name found in df
+    """
+    for c in candidates:
+        if c in df.columns:
+            return c
+    raise KeyError(f"Could not find column for {name}. Tried {candidates}. Got {list(df.columns)}")
+
+
+# ================================================================
+# Main Step 1: Determine valid (j,k) pairs
+# ================================================================
+
 def det_K_suit(f_url: str,
-               k_url: str,
-               R: int,
-               base_change: list,
+               R: float,
+               base_change: List[List[float]],
                output_file: str) -> str:
     """
-    Given a list of j-coordinates and potential k-vectors, determine which
-    (j,k) pairs are valid based on a radius R in a transformed basis.
+    From the formatted site CSV (f_url), determine valid (j,k) pairs using:
+
+    Conditions:
+      - |k| <= R (norm in transformed basis)
+      - |j - k| <= R (relative distance in transformed basis)
+      - Same i-site index between j and k
 
     Args:
-        f_url: CSV path containing j-site dx,dy,dz.
-        k_url: CSV path containing potential k displacements.
-        R: Radius cutoff in transformed space.
-        base_change: 3x3 matrix to transform relative (k-j) vectors.
-        output_file: Output CSV with matching (j,k) pairs.
+        f_url (str): input CSV path (formatted data file)
+        R (float): cutoff radius
+        base_change (List[List[float]]): 3x3 matrix mapping lattice basis to Cartesian
+        output_file (str): output CSV path
 
     Returns:
-        Path to saved CSV file with columns ['j-coordinate', 'k-coordinate'].
+        str: output CSV path
+
+    Output CSV columns:
+        i; j; j-coordinate; k_j; k-coordinate
     """
-    df_j = pd.read_csv(f_url, sep=";", index_col=False)
-    df_k = pd.read_csv(k_url, sep=";", index_col=False)
+    # Read input CSV
+    df = pd.read_csv(f_url, sep=";", index_col=False)
 
-    j_coords = list(zip(df_j["dx"], df_j["dy"], df_j["dz"]))
-    k_coords = list(zip(df_k["k_dx"], df_k["k_dy"], df_k["k_dz"]))
-    T = np.array(base_change)  # Transformation matrix
+    # Detect required columns (robust to name variations)
+    i_col = _detect_column(df, ["i", "site_i"], "i")
+    j_col = _detect_column(df, ["j", "site_j"], "j")
+    dx_col = _detect_column(df, ["dx"], "dx")
+    dy_col = _detect_column(df, ["dy"], "dy")
+    dz_col = _detect_column(df, ["dz"], "dz")
 
-    matched_j, matched_k = [], []
+    # Lattice transformation matrix
+    T = np.array(base_change, dtype=float)
+    if T.shape != (3, 3):
+        raise ValueError("base_change must be a 3x3 matrix")
 
-    for j in j_coords:
-        j_vec = np.array(j, dtype=float)
-        for k in k_coords:
-            k_vec = np.array(k, dtype=float)
-            rel_vec = k_vec - j_vec
-            rel_transformed = rel_vec @ T
-            dist2 = np.dot(rel_transformed, rel_transformed)
-            if 0 < dist2 <= R**2:
-                matched_j.append(to_tuple(j_vec))
-                matched_k.append(to_tuple(k_vec))
+    # Collect all sites as (i, j, coord)
+    coords = []
+    for _, row in df.iterrows():
+        coords.append({
+            "i": int(row[i_col]),
+            "j": int(row[j_col]),
+            "coord": np.array([float(row[dx_col]), float(row[dy_col]), float(row[dz_col])])
+        })
 
-    df_out = pd.DataFrame({
-        "j-coordinate": [clean_tuple_str(j) for j in matched_j],
-        "k-coordinate": [clean_tuple_str(k) for k in matched_k]
-    })
+    # Prepare results
+    out_rows = []
+    R2 = float(R) ** 2  # cutoff squared for efficiency
 
+    # Loop over all (j, k) pairs
+    for row_j in coords:
+        j_vec = row_j["coord"]
+
+        for row_k in coords:
+            # Must belong to same i-site
+            if row_j["i"] != row_k["i"]:
+                continue
+
+            k_vec = row_k["coord"]
+
+            # Condition 1: |k| <= R (in transformed basis)
+            if np.dot(k_vec @ T, k_vec @ T) > R2:
+                continue
+
+            # Condition 2: |j - k| <= R (relative distance in transformed basis)
+            rel = j_vec - k_vec
+            if np.dot(rel @ T, rel @ T) > R2:
+                continue
+
+            # Store valid (j, k) pair
+            out_rows.append({
+                "i": row_j["i"],
+                "j": row_j["j"],
+                "j-coordinate": clean_tuple_str(tuple(j_vec)),
+                "k_j": row_k["j"],
+                "k-coordinate": clean_tuple_str(tuple(k_vec))
+            })
+
+    # Save output CSV
+    df_out = pd.DataFrame(out_rows, columns=["i", "j", "j-coordinate", "k_j", "k-coordinate"])
     df_out.to_csv(output_file, sep=";", index=False)
-    print(f"Done: The string url is: {output_file} (Clean tuple output)")
+    print(f"[det_K_suit] Wrote {len(df_out)} rows written to: {output_file}")
     return output_file
 
-# === Step 3A: Create JSON mapping of j-sites → list of k-sites ===
-def det_K_match_json(f_url: str, k_url: str, output_file: str) -> str:
+
+# ================================================================
+# Main Step 2: Convert CSV pairs to JSON mapping
+# ================================================================
+
+def det_K_match_json(det_k_csv: str, json_out: str) -> str:
     """
-    From matched (j,k) CSV, generate a JSON file mapping each j-site to a list of contributing k-sites.
+    Convert CSV from det_K_suit to JSON mapping of j-site → k-sites.
+
+    JSON structure:
+    {
+      "(i, j, j_dx, j_dy, j_dz)": [
+        [k_j, k_dx, k_dy, k_dz], ...
+      ]
+    }
 
     Args:
-        f_url: Formatted CSV with j-site dx,dy,dz columns.
-        k_url: Matched CSV with 'j-coordinate' and 'k-coordinate' columns.
-        output_file: Path to save JSON file.
+        det_k_csv (str): input CSV file (output of det_K_suit)
+        json_out (str): output JSON path
 
     Returns:
-        Path to output JSON.
+        str: output JSON path
     """
-    df_formatted = pd.read_csv(f_url, sep=";", index_col=False)
-    df_matches = pd.read_csv(k_url, sep=";", index_col=False)
+    df = pd.read_csv(det_k_csv, sep=";")
 
-    # Parse string tuples into actual tuple objects
-    df_matches['j-tuple'] = df_matches['j-coordinate'].apply(lambda s: tuple(map(float, ast.literal_eval(s))))
-    df_matches['k-tuple'] = df_matches['k-coordinate'].apply(lambda s: tuple(map(float, ast.literal_eval(s))))
+    def parse_tuple(s: str) -> List[float]:
+        """Parse tuple string '(x, y, z)' into list of floats"""
+        return [float(x) for x in ast.literal_eval(s)]
 
-    # Ensure k-tuples are present in formatted j-coordinates (validity check)
-    known_j_coords = set(tuple(row) for row in df_formatted[['dx', 'dy', 'dz']].values)
-    df_valid = df_matches[df_matches['k-tuple'].isin(known_j_coords)]
+    mapping = {}
+    for _, row in df.iterrows():
+        i_val = int(row["i"])
+        j_val = int(row["j"])
+        j_coord = parse_tuple(row["j-coordinate"])
+        k_j = int(row["k_j"])
+        k_coord = parse_tuple(row["k-coordinate"])
 
-    # Build mapping
-    grouped_dict = {}
-    for _, row in df_valid.iterrows():
-        j = row['j-tuple']
-        k = row['k-tuple']
-        grouped_dict.setdefault(j, []).append(k)
+        # Unique key per (i, j, j-coord)
+        key = f"({i_val}, {j_val}, {j_coord[0]}, {j_coord[1]}, {j_coord[2]})"
 
-    # Convert keys and values to JSON-safe formats
-    json_ready = {str(j): [list(k) for k in k_list] for j, k_list in grouped_dict.items()}
+        # Append k-site data
+        mapping.setdefault(key, []).append([k_j, k_coord[0], k_coord[1], k_coord[2]])
 
-    with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump(json_ready, f, indent=2)
+    # Save JSON
+    with open(json_out, "w", encoding="utf-8") as f:
+        json.dump(mapping, f, indent=2)
 
-    print(f"Done: The string url is: {output_file} (Result)")
-    return output_file
-
-# === Step 3B: Create CSV mapping of j-sites → list of k-sites (same logic as JSON but saved differently) ===
-def det_K_match_csv(f_url: str, k_url: str, output_file: str) -> str:
-    """
-    Generate a CSV file grouping each j-site with its matched k-site list.
-
-    Args:
-        f_url: Formatted CSV with dx,dy,dz columns.
-        k_url: Matched (j,k) CSV.
-        output_file: Path to save grouped CSV.
-
-    Returns:
-        Path to saved CSV.
-    """
-    df_j = pd.read_csv(f_url, sep=";", index_col=False)
-    df_k = pd.read_csv(k_url, sep=";", index_col=False)
-
-    j_set = set(tuple(row) for row in df_j[['dx', 'dy', 'dz']].values)
-
-    df_k['k-tuple'] = df_k['k-coordinate'].apply(lambda x: tuple(map(float, ast.literal_eval(x))))
-    df_k['j-tuple'] = df_k['j-coordinate'].apply(lambda x: tuple(map(float, ast.literal_eval(x))))
-
-    df_k_filtered = df_k[df_k['k-tuple'].isin(j_set)]
-
-    grouped = df_k_filtered.groupby('j-tuple')['k-tuple'].apply(list).reset_index()
-
-    grouped.to_csv(output_file, sep=";", index=False, header=["j-coordinate", "k-coordinates"])
-    print(f"Done: The string url is: {output_file} (Result)")
-    return output_file
+    print(f"[det_K_match_json] Wrote {len(mapping)} keys written to: {json_out}")
+    return json_out
