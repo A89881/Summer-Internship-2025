@@ -12,7 +12,7 @@ def detect_encoding(file_path: str, num_bytes: int = 1024) -> str:
 def format_data(url: str,
                 output_file: str,
                 shift_map: Optional[Dict[Tuple[int, int], Tuple[float, float, float]]] = None,
-                scale_response: float = -1.0) -> str:
+                scale_response: float = 1.0) -> str:
     """
     Load, clean, shift, and optionally scale response data.
     Args:

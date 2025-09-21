@@ -16,10 +16,9 @@ import os
 # (Please copy and paste it into the top and align it correctly)
 # i    j    dx   dy   dz   Jij         χ⁰↑             χ⁰↓
 
-# url = r"Bcc-Fe\chfile-1.dat"         # Ferromagnetic Bcc Iron
+url = r"Bcc-Fe\chfile-1.dat"         # Ferromagnetic Bcc Iron
 # url = r"AFM-Cr\AFM-chfile.dat"       # Antiferromagnetic Chromium (2 sublattices)
-# url = r"NM-Cr\NM-chfile-1.dat"       # Nonmagnetic Chromium
-url = r"TaSe\chfile-TaSe.dat"       
+# url = r"NM-Cr\NM-chfile-1.dat"       # Nonmagnetic Chromium   
 
 base_folder = os.path.dirname(url)
 
@@ -75,7 +74,7 @@ f_url = format_data(
     url, 
     output_file=os.path.join(base_folder, "formated_data.csv"),
     shift_map=shift_rules_TaSe,
-    scale_response=1
+    scale_response=1.0 # Default is 1.0
 )
 
 # === STEP 2: Find K-sites Valid for Each J-site Using Shifted Coordinates + Lattice Transform ===
@@ -96,7 +95,7 @@ X_file = compute_Xzz_all_site_dependent(
     kfile=k_match_url,
     site_map_file=f_url,
     U_params=[
-        (0.0, 0.0, 0.0, 0.0),  # U matrix for site type 1  # U↑↑, U↓↓, U↑↓, U↓↑
+        (2.0, 2.0, 0.0, 0.0),  # U matrix for site type 1  # U↑↑, U↓↓, U↑↓, U↓↑
     ],
     output_file=os.path.join(base_folder, "xzz_output_iter.csv"),
     temp_txt=os.path.join(base_folder, "debug_iter.txt")
