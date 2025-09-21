@@ -60,46 +60,50 @@ def format_data(url: str,
     print(f"Done: The string url is: {output_file} (Shift-augmented, Scaled={scale_response})")
     return output_file
 
-def merge_format_and_xzz(
-    format_file: str,
-    xzz_file: str,
-    output_file) -> None:
+import csv
+
+def merge_format_and_xzz(format_file: str, xzz_file: str, output_file: str) -> None:
     """
-    Merge Xzz values into the format file and output a .dat file.
-    
+    Merge Xzz values into the original format file and output a .dat file for analysis.
+
     Parameters:
         format_file: path to the original format file (.csv or .txt)
-        xzz_file: path to the Xzz file (CSV with j-coordinate, Xzz)
+        xzz_file: path to the Xzz CSV file (must have columns: i;j;j-coordinate;N_k;Xzz)
         output_file: path to the output .dat file
     """
-    # Parse Xzz file
+    # === 1. Parse Xzz file into a mapping of coordinates to Xzz values ===
     xzz_map = {}
-    with open(xzz_file, "r", encoding="utf-8") as xfile:
-        reader = csv.reader(xfile)
-        next(reader)  # Skip header
+    with open(xzz_file, "r", encoding="utf-8") as xf:
+        reader = csv.DictReader(xf, delimiter=';')
         for row in reader:
-            coord_str, xzz_val = row
-            coord = tuple(int(float(x)) for x in eval(coord_str))  # Convert to (dx, dy, dz)
-            xzz_map[coord] = float(xzz_val)
+            # Extract j-coordinate string and convert to tuple of floats
+            coord_str = row['j-coordinate']
+            coord = tuple(float(x) for x in eval(coord_str))
+            xzz_val = float(row['Xzz'])
+            xzz_map[coord] = xzz_val
 
-    # Read format file and write output
-    with open(format_file, "r", encoding="utf-8") as ffile, open(output_file, "w", encoding="utf-8") as outfile:
+    # === 2. Read format file and write merged .dat output ===
+    with open(format_file, "r", encoding="utf-8") as ffile, \
+         open(output_file, "w", encoding="utf-8") as outfile:
+        
         reader = csv.reader(ffile, delimiter=';')
-        header = next(reader)  # Skip original header
+        header = next(reader)  # skip original header
 
         # Write new header with fixed-width spacing
-        outfile.write(f"{'i':<4}{'j':<4}{'dx':>5}{'dy':>5}{'dz':>5}{'Jij':>11}"
-                      f"{'χ⁰↑':>18}{'χ⁰↓':>18}{'Xzz':>15}\n")
+        outfile.write(f"{'i':<4}{'j':<4}{'dx':>7}{'dy':>7}{'dz':>7}"
+                      f"{'Jij':>12}{'χ⁰↑':>15}{'χ⁰↓':>15}{'Xzz':>15}\n")
 
         for row in reader:
             i, j, dx, dy, dz, Jij, chi_up, chi_down = row
-            # dx_i, dy_i, dz_i = int(dx), int(dy), int(dz)
-            dx_i, dy_i, dz_i = float(dx), float(dy), float(dz)
-            coord = (dx_i, dy_i, dz_i)
-            xzz_val = xzz_map.get(coord, 0.0)
+            dx_f, dy_f, dz_f = float(dx), float(dy), float(dz)
+            coord = (dx_f, dy_f, dz_f)
+
+            xzz_val = xzz_map.get(coord, 0.0)  # default to 0.0 if not found
 
             outfile.write(
-                f"{int(i):<4}{int(j):<4}{dx_i:5}{dy_i:5}{dz_i:5}"
-                f"{float(Jij):11.6f}{float(chi_up):18.6E}{float(chi_down):18.6E}{xzz_val:15.6E}\n"
+                f"{int(i):<4}{int(j):<4}{dx_f:7.3f}{dy_f:7.3f}{dz_f:7.3f}"
+                f"{float(Jij):12.6f}{float(chi_up):15.6E}{float(chi_down):15.6E}{xzz_val:15.6E}\n"
             )
-    print(f"Done: The string url is: {output_file} (Result)")
+
+    print(f"Done: merged .dat file written to {output_file}")
+

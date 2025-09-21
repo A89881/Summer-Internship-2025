@@ -116,8 +116,8 @@ X_file = compute_Xzz_all_site_dependent(
     temp_txt=os.path.join(base_folder, "debug_iter.txt")
 )
 
-# # === STEP 6: Merge Raw + Computed Data (useful for plotting/validation/export) ===
-# merge_format_and_xzz(f_url, X_file, output_file=os.path.join(base_folder, "formated_output.dat"))
+# === STEP 6: Merge Raw + Computed Data (useful for plotting/validation/export) ===
+merge_format_and_xzz(f_url, X_file, output_file=os.path.join(base_folder, "formated_output.dat"))
 
 time_end = t.time()
 print(f"Data preparation and χ^zz computation done. Runtime: {time_end - time_start:.2f} s")
@@ -188,7 +188,7 @@ print(f"Data preparation and χ^zz computation done. Runtime: {time_end - time_s
 # )
 
 # === OPTIONAL 3D - Plot ===
-# phys_plot(X_file)
+phys_plot_by_i(X_file)
 time_end = t.time()
 print(f"Plotting finished. Runtime: {time_end - time_start:.2f} s")
 
