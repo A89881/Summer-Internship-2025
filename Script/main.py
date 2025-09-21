@@ -16,16 +16,11 @@ import os
 # (Please copy and paste it into the top and align it correctly)
 # i    j    dx   dy   dz   Jij         χ⁰↑             χ⁰↓
 
-# url = r"Bcc-Fe\chfile-1.dat"         # Ferromagnetic Bcc Iron
-url = r"AFM-Cr-U2\AFM-chfile.dat"       # Antiferromagnetic Chromium (2 sublattices)
-# url = r"NM-Cr\NM-chfile-1.dat"       # Nonmagnetic Chromium   
-
+url = r"NM-Cr\NM-Cr-U2\NM-chfile-1.dat"    
 base_folder = os.path.dirname(url)
 
 # === PHYSICAL PARAMETERS ===
 radius = 5  # Cutoff radius for valid k-site neighbors
-min = -10   # Grid range minimum
-max = 10    # Grid range maximum
 
 # === SITE SHIFT RULES FOR SUBLATTICES ===
 # For AFM-Cr, sublattices are at (0,0,0) and (0.5,0.5,0.5) → shift between site types
@@ -52,7 +47,7 @@ base_change_matrix_AFM = [
     [0.0, 1.0, 0.0],
     [0.0, 0.0, 1.0]
 ]
-base_change_matrix_Bcc = [
+base_change_matrix_BCC = [
     [-0.5, 0.5, 0.5],
     [0.5, -0.5, 0.5],
     [0.5, 0.5, -0.5]
@@ -73,7 +68,7 @@ time_start = t.time()
 f_url = format_data(
     url, 
     output_file=os.path.join(base_folder, "formated_data.csv"),
-    shift_map=shift_rules_AFM,
+    shift_map=shift_rules_null,
     scale_response=1.0 # Default is 1.0
 )
 
@@ -81,7 +76,7 @@ f_url = format_data(
 k_suit_url = det_K_suit(
     f_url, 
     radius, 
-    base_change_matrix_AFM, 
+    base_change_matrix_NM, 
     output_file=os.path.join(base_folder, "k_pot_coords.csv")
 )
 
@@ -112,42 +107,41 @@ print(f"[main.py] Data preparation and χ^zz computation done. Runtime: {time_en
 # === Optional: Enable Visualisation for Decay and Comparison Plots ===
 # === === === === === === === === === === === === === === === === ===
 
-# AFM-Cr Setup (enabled by default)
-Length_scale = 5.32988627
+# # AFM-Cr Setup (enabled by default)
+# Length_scale = 5.32988627
+# plot_static_and_spin_decay(
+#     static_file=f_url,
+#     spin_file=X_file,
+#     transform_matrix=base_change_matrix_AFM,
+#     scale_diagonal=[Length_scale] * 3,
+#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
+#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
+#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
+# )
+
+# # Bcc-Fe Setup (enabled by default)
+# Length_scale = 5.42 # Bcc - Fe Length scaling
+# plot_static_and_spin_decay(
+#     static_file=f_url,
+#     spin_file=X_file,
+#     transform_matrix= base_change_matrix_BCC,
+#     scale_diagonal=[Length_scale] * 3,
+#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
+#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
+#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
+# )
+
+# NM-Cr Setup (enabled by default)
+Length_scale = 4.640997226251
 plot_static_and_spin_decay(
     static_file=f_url,
     spin_file=X_file,
-    transform_matrix=base_change_matrix_AFM,
+    transform_matrix=base_change_matrix_NM,
     scale_diagonal=[Length_scale] * 3,
     output_static=os.path.join(base_folder, "static_decay_plot.png"),
     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
 )
-
-# # Bcc-Fe Setup (enabled by default)
-# Length_scale = 5.42 # Bcc - Fe Length scaling
-# # Length_scale = 7.98 # NA - BCC Length scaling
-# plot_static_and_spin_decay(
-#     static_file=f_url,
-#     spin_file=X_file,
-#     transform_matrix= base_change_matrix_Bcc,
-#     scale_diagonal=[Length_scale] * 3,
-#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
-#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
-#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
-# )
-
-# # NM-Cr Setup (enabled by default)
-# Length_scale = 4.640997226251
-# plot_static_and_spin_decay(
-#     static_file=f_url,
-#     spin_file=X_file,
-#     transform_matrix=base_change_matrix_NM,
-#     scale_diagonal=[Length_scale] * 3,
-#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
-#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
-#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
-# )
 
 # # TaSe2 Setup (enabled by default)
 # Length_scale = 6.760364108039488
