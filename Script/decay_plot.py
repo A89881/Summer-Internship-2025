@@ -32,7 +32,7 @@ def plot_static_and_spin_decay(
     # === Load static bare susceptibility χ⁰ ===
     static_df = pd.read_csv(static_file, sep=';')
     static_df['coord'] = static_df.apply(lambda row: (float(row['dx']), float(row['dy']), float(row['dz'])), axis=1)
-    static_df['chi0'] = 0.25 * (static_df['χ⁰↑'] + static_df['χ⁰↓'])  # Average up/down
+    static_df['chi0'] = 0.5 * (static_df['χ⁰↑'] + static_df['χ⁰↓'])  # Average up/down
 
     coords_static = np.array(static_df['coord'].tolist())
     chi0_vals = static_df['chi0'].values

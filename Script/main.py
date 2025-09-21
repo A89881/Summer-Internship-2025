@@ -16,8 +16,8 @@ import os
 # (Please copy and paste it into the top and align it correctly)
 # i    j    dx   dy   dz   Jij         χ⁰↑             χ⁰↓
 
-url = r"Bcc-Fe\chfile-1.dat"         # Ferromagnetic Bcc Iron
-# url = r"AFM-Cr\AFM-chfile.dat"       # Antiferromagnetic Chromium (2 sublattices)
+# url = r"Bcc-Fe\chfile-1.dat"         # Ferromagnetic Bcc Iron
+url = r"AFM-Cr-U2\AFM-chfile.dat"       # Antiferromagnetic Chromium (2 sublattices)
 # url = r"NM-Cr\NM-chfile-1.dat"       # Nonmagnetic Chromium   
 
 base_folder = os.path.dirname(url)
@@ -73,7 +73,7 @@ time_start = t.time()
 f_url = format_data(
     url, 
     output_file=os.path.join(base_folder, "formated_data.csv"),
-    shift_map=shift_rules_TaSe,
+    shift_map=shift_rules_AFM,
     scale_response=1.0 # Default is 1.0
 )
 
@@ -81,7 +81,7 @@ f_url = format_data(
 k_suit_url = det_K_suit(
     f_url, 
     radius, 
-    base_change_matrix_TaSe, 
+    base_change_matrix_AFM, 
     output_file=os.path.join(base_folder, "k_pot_coords.csv")
 )
 
@@ -96,6 +96,7 @@ X_file = compute_Xzz_all_site_dependent(
     site_map_file=f_url,
     U_params=[
         (2.0, 2.0, 0.0, 0.0),  # U matrix for site type 1  # U↑↑, U↓↓, U↑↓, U↓↑
+        # (0.0, 0.0, 0.0, 0.0),  # U matrix for site type 1  # U↑↑, U↓↓, U↑↓, U↓↑
     ],
     output_file=os.path.join(base_folder, "xzz_output_iter.csv"),
     temp_txt=os.path.join(base_folder, "debug_iter.txt")
@@ -111,17 +112,17 @@ print(f"[main.py] Data preparation and χ^zz computation done. Runtime: {time_en
 # === Optional: Enable Visualisation for Decay and Comparison Plots ===
 # === === === === === === === === === === === === === === === === ===
 
-# # AFM-Cr Setup (enabled by default)
-# Length_scale = 5.32988627
-# plot_static_and_spin_decay(
-#     static_file=f_url,
-#     spin_file=X_file,
-#     transform_matrix=base_change_matrix_AFM,
-#     scale_diagonal=[Length_scale] * 3,
-#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
-#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
-#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
-# )
+# AFM-Cr Setup (enabled by default)
+Length_scale = 5.32988627
+plot_static_and_spin_decay(
+    static_file=f_url,
+    spin_file=X_file,
+    transform_matrix=base_change_matrix_AFM,
+    scale_diagonal=[Length_scale] * 3,
+    output_static=os.path.join(base_folder, "static_decay_plot.png"),
+    output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
+    output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
+)
 
 # # Bcc-Fe Setup (enabled by default)
 # Length_scale = 5.42 # Bcc - Fe Length scaling
@@ -148,17 +149,17 @@ print(f"[main.py] Data preparation and χ^zz computation done. Runtime: {time_en
 #     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
 # )
 
-# TaSe2 Setup (enabled by default)
-Length_scale = 6.760364108039488
-plot_static_and_spin_decay(
-    static_file=f_url,
-    spin_file=X_file,
-    transform_matrix= base_change_matrix_TaSe,
-    scale_diagonal=[Length_scale] * 3,
-    output_static=os.path.join(base_folder, "static_decay_plot.png"),
-    output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
-    output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
-)
+# # TaSe2 Setup (enabled by default)
+# Length_scale = 6.760364108039488
+# plot_static_and_spin_decay(
+#     static_file=f_url,
+#     spin_file=X_file,
+#     transform_matrix= base_change_matrix_TaSe,
+#     scale_diagonal=[Length_scale] * 3,
+#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
+#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
+#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
+# )
 
 # # === OPTIONAL 3D - Plot ===
 # phys_plot_by_i(X_file)
