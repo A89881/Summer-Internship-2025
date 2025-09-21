@@ -24,7 +24,7 @@ import os
 # url = r"Cu-FCC\chfile-1.dat"         # FCC Copper
 # url = r"TaSe\chfile-TaSe.dat"       
 # url = r"Testing\bcc-fe\chfile-1.dat"          # Testing File for bcc-fe 
-url = r"Testing\afm-cr\AFM-chfile.dat"          # Testing File for afm-cr
+url = r"Testing\afm_cr_1\AFM-chfile.dat"          # Testing File for afm-cr
 
 base_folder = os.path.dirname(url)
 
@@ -89,29 +89,18 @@ f_url = format_data(
     scale_response=1
 )
 
-# === STEP 2: Determine Valid K-sites in Radius ===
-k_pot_url = det_K_pot(
-    min, 
-    max, 
-    radius, 
-    output_file=os.path.join(base_folder, "k_pot_coords.csv"),
-    shift_rules=shift_rules_AFM
-)
+# # === STEP 3: Find K-sites Valid for Each J-site Using Shifted Coordinates + Lattice Transform ===
+# k_suit_url = det_K_suit(
+#     f_url, 
+#     radius, 
+#     base_change_matrix_AFM, 
+#     output_file=os.path.join(base_folder, "k_pot_coords.csv")
+# )
 
-# === STEP 3: Find K-sites Valid for Each J-site Using Shifted Coordinates + Lattice Transform ===
-k_suit_url = det_K_suit(
-    f_url, 
-    k_pot_url, 
-    radius, 
-    base_change_matrix_AFM, 
-    output_file=os.path.join(base_folder, "k_pot_coords.csv")
-)
+# # === STEP 4: Group K by J into JSON (for input to Dyson solver)  ===
+# k_match_url = det_K_match_json(k_suit_url, json_out=os.path.join(base_folder, "neighbouring_k_to_j.json"))
 
-# === STEP 4: Group K by J into JSON (for input to Dyson solver) or CSV (debug view) ===
-# Use one (recommended JSON for Reliability) of these depending on what your solver expects:
-# k_match_url = det_K_match_csv(...)   # Easier to understand data format (Recommended for debugging)
-k_match_url = det_K_match_json(f_url, k_suit_url, output_file=os.path.join(base_folder, "neighbouring_k_to_j.json"))
-
+k_match_url = r"Testing\afm_cr_1\neighbouring_k_to_j.json"
 # === STEP 5: Define Kernel Parameters and Solve for χ^zz ===
 # === ADVANCED: Example for future site-dependent U implementations (Multi-U KERNEL systems) ===
 X_file = compute_Xzz_all_site_dependent(
@@ -127,8 +116,8 @@ X_file = compute_Xzz_all_site_dependent(
     temp_txt=os.path.join(base_folder, "debug_iter.txt")
 )
 
-# === STEP 6: Merge Raw + Computed Data (useful for plotting/validation/export) ===
-merge_format_and_xzz(f_url, X_file, output_file=os.path.join(base_folder, "formated_output.dat"))
+# # === STEP 6: Merge Raw + Computed Data (useful for plotting/validation/export) ===
+# merge_format_and_xzz(f_url, X_file, output_file=os.path.join(base_folder, "formated_output.dat"))
 
 time_end = t.time()
 print(f"Data preparation and χ^zz computation done. Runtime: {time_end - time_start:.2f} s")
@@ -137,17 +126,17 @@ print(f"Data preparation and χ^zz computation done. Runtime: {time_end - time_s
 # === Optional: Enable Visualisation for Decay and Comparison Plots ===
 # === === === === === === === === === === === === === === === === ===
 
-# AFM-Cr Setup (enabled by default)
-Length_scale = 5.32988627
-plot_static_and_spin_decay(
-    static_file=f_url,
-    spin_file=X_file,
-    transform_matrix=base_change_matrix_AFM,
-    scale_diagonal=[Length_scale] * 3,
-    output_static=os.path.join(base_folder, "static_decay_plot.png"),
-    output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
-    output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
-)
+# # AFM-Cr Setup (enabled by default)
+# Length_scale = 5.32988627
+# plot_static_and_spin_decay(
+#     static_file=f_url,
+#     spin_file=X_file,
+#     transform_matrix=base_change_matrix_AFM,
+#     scale_diagonal=[Length_scale] * 3,
+#     output_static=os.path.join(base_folder, "static_decay_plot.png"),
+#     output_xzz=os.path.join(base_folder, "xzz_decay_plot.png"),
+#     output_comparison=os.path.join(base_folder, "comparison_decay_plot.png")
+# )
 
 # # Bcc-Fe Setup (enabled by default)
 # Length_scale = 5.42 # Bcc - Fe Length scaling
